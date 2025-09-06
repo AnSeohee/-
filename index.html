@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>공고 보드</title>
+  <link rel="preconnect" href="https://unpkg.com" />
+  <style>
+    :root { --bg:#0b0f14; --card:#121821; --muted:#94a3b8; --text:#e6edf3; --accent:#60a5fa; --line:#1f2937; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Noto Sans KR, Apple SD Gothic Neo, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; background:linear-gradient(180deg, #0b0f14, #0b1220); color:var(--text); }
+    header { position:sticky; top:0; z-index:10; backdrop-filter:saturate(1.2) blur(8px); background:rgba(11,15,20,0.7); border-bottom:1px solid var(--line); }
+    .wrap { max-width:1100px; margin:0 auto; padding:20px; }
+    h1 { margin:0; font-size:26px; letter-spacing:0.2px; }
+    .controls { display:grid; grid-template-columns:1fr 180px 180px 160px; gap:10px; margin-top:14px; }
+    input, select { width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--line); background:var(--card); color:var(--text); }
+    input::placeholder { color:#6b7280; }
+    .chips { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+    .chip { font-size:12px; padding:6px 10px; border-radius:999px; background:#0f172a; border:1px solid var(--line); color:var(--muted); cursor:default; }
+    .grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:16px; margin-top:18px; }
+    @media (max-width:1000px){ .grid { grid-template-columns:repeat(2, 1fr); } .controls{ grid-template-columns:1fr 1fr; } }
+    @media (max-width:640px){ .grid { grid-template-columns:1fr; } }
+    .card { border:1px solid var(--line); background:linear-gradient(180deg, #0e1522, #0a0f18); border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:10px; box-shadow:0 6px 16px rgba(0,0,0,0.25); }
+    .row { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+    .title { font-size:16px; font-weight:700; line-height:1.35; }
+    .company { color:var(--muted); font-size:13px; }
+    .meta { display:flex; gap:8px; flex-wrap:wrap; }
+    .tag { padding:4px 8px; border-radius:8px; border:1px solid var(--line); color:var(--muted); font-size:12px; }
+    .deadline { font-weight:600; color:var(--accent); }
+    .btn { display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:10px 12px; border-radius:10px; background:var(--accent); color:#0b0f14; font-weight:700; text-decoration:none; border:0; }
+    .empty { text-align:center; color:var(--muted); padding:40px 0; border:1px dashed var(--line); border-radius:12px; }
+    footer { color:#7c8aa3; font-size:12px; text-align:center; padding:24px 0 40px; }
+    .hint { font-size:12px; color:#9aa7bd; margin-top:6px; }
+  </style>
+  <!-- CSV 파싱을 위해 PapaParse 사용 (간단/안정) -->
+  <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <h1>공고 보드</h1>
+      <div class="controls">
+        <input id="search" type="search" placeholder="검색: 제목, 회사, 키워드..." />
+        <select id="filterCompany"><option value="">회사: 전체</option></select>
+        <select id="filterLocation"><option value="">지역: 전체</option></select>
+        <select id="sort">
+          <option value="deadlineAsc">마감 임박순</option>
+          <option value="deadlineDesc">마감 늦은순</option>
+          <option value="createdDesc">최신 추가순</option>
+          <option value="createdAsc">오래된 추가순</option>
+        </select>
+      </div>
+      <div class="hint">🔧 Google Sheet에서 수정하면 여기 자동 반영됩니다. 아래 설정 가이드를 참고하세요.</div>
+      <div class="chips" id="activeChips"></div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div id="grid" class="grid"></div>
+    <div id="empty" class="empty" style="display:none">조건에 맞는 공고가 없습니다.</div>
+  </main>
+
+  <footer>
+    <div class="wrap">Made for you · 자동 새로고침 10분 간격</div>
+  </footer>
+
+  <script>
+    // 1) 여기에 본인 시트 CSV URL 붙여넣기
+    //    Google Sheets ➜ 파일 ➜ 웹에 게시 ➜ '쉼표로 구분된 값(.csv)' 로 게시한 링크
+    //    예시: https://docs.google.com/spreadsheets/d/e/2PACX-.../pub?gid=0&single=true&output=csv
+    const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRlDY1wcqL865tOwgSiUH1ooIAT7UQYIAAxSEb07KLETAE0IPYJeDZP_dWIB_gcnirFtepi_D1Aey6E/pub?output=csv";
+
+    // 2) 시트 열 헤더는 아래와 같이 맞추면 좋습니다 (대소문자 그대로 권장)
+    //    Title | Company | Location | Category | Deadline | Link | CreatedAt | Notes
+    //    - Deadline: YYYY-MM-DD (또는 YYYY/MM/DD)
+    //    - CreatedAt: YYYY-MM-DD (작성일/추가일)
+
+    const state = { raw: [], view: [], filters: { q: "", company: "", location: "" }, sort: "deadlineAsc" };
+
+    const els = {
+      grid: document.getElementById('grid'),
+      empty: document.getElementById('empty'),
+      search: document.getElementById('search'),
+      filterCompany: document.getElementById('filterCompany'),
+      filterLocation: document.getElementById('filterLocation'),
+      sort: document.getElementById('sort'),
+      chips: document.getElementById('activeChips'),
+    };
+
+    async function fetchCSV(){
+      if(!SHEET_CSV_URL || SHEET_CSV_URL.includes('PUT_YOUR')){
+        console.warn('시트 URL이 설정되지 않았습니다.');
+        state.raw = sampleData();
+        pipeline();
+        return;
+      }
+      try{
+        const res = await fetch(SHEET_CSV_URL, { cache: 'no-store' });
+        const csv = await res.text();
+        const parsed = Papa.parse(csv, { header:true, skipEmptyLines:true });
+        state.raw = (parsed.data || []).map(normalizeRow).filter(x=>x.Title && x.Link);
+        pipeline();
+      }catch(e){
+        console.error(e);
+        state.raw = sampleData();
+        pipeline();
+      }
+    }
+
+    function normalizeRow(r){
+      const trim = v => (v==null?"":String(v)).trim();
+      const parseDate = v => {
+        const s = trim(v).replaceAll('/', '-');
+        const d = new Date(s);
+        return isNaN(d.getTime()) ? null : d;
+      };
+      return {
+        Title: trim(r.Title || r.title || r.제목),
+        Company: trim(r.Company || r.company || r.회사),
+        Location: trim(r.Location || r.location || r.지역),
+        Category: trim(r.Category || r.category || r.분류 || r.카테고리),
+        Deadline: parseDate(r.Deadline || r.deadline || r.마감일),
+        Link: trim(r.Link || r.link || r.URL || r.링크),
+        CreatedAt: parseDate(r.CreatedAt || r.createdAt || r.created || r.작성일),
+        Notes: trim(r.Notes || r.notes || r.비고 || r.메모),
+      };
+    }
+
+    function pipeline(){
+      const { q, company, location } = state.filters;
+      const qx = q.toLowerCase();
+      let arr = state.raw.filter(it => {
+        const hitQ = !qx || [it.Title, it.Company, it.Location, it.Category, it.Notes].some(v => (v||'').toLowerCase().includes(qx));
+        const hitC = !company || it.Company === company;
+        const hitL = !location || it.Location === location;
+        return hitQ && hitC && hitL;
+      });
+
+      // sort
+      const byDeadline = (a,b) => (a.Deadline? a.Deadline.getTime(): Infinity) - (b.Deadline? b.Deadline.getTime(): Infinity);
+      const byDeadlineDesc = (a,b) => (b.Deadline? b.Deadline.getTime(): -Infinity) - (a.Deadline? a.Deadline.getTime(): -Infinity);
+      const byCreated = (a,b) => (a.CreatedAt? a.CreatedAt.getTime(): 0) - (b.CreatedAt? b.CreatedAt.getTime(): 0);
+      const byCreatedDesc = (a,b) => (b.CreatedAt? b.CreatedAt.getTime(): 0) - (a.CreatedAt? a.CreatedAt.getTime(): 0);
+      switch(state.sort){
+        case 'deadlineAsc': arr.sort(byDeadline); break;
+        case 'deadlineDesc': arr.sort(byDeadlineDesc); break;
+        case 'createdAsc': arr.sort(byCreated); break;
+        case 'createdDesc': arr.sort(byCreatedDesc); break;
+      }
+
+      state.view = arr;
+      render();
+      populateFilters();
+      renderChips();
+    }
+
+    function render(){
+      els.grid.innerHTML = '';
+      if(state.view.length === 0){ els.empty.style.display = 'block'; return; }
+      els.empty.style.display = 'none';
+      for(const it of state.view){
+        const card = document.createElement('div');
+        card.className = 'card';
+        const dStr = it.Deadline ? formatDate(it.Deadline) : '마감 미정';
+        const soon = daysUntil(it.Deadline);
+        const deadlineHTML = `<span class="deadline">${dStr}${Number.isFinite(soon) ? ` · D${soon>=0?'-':''}${Math.abs(soon)}` : ''}</span>`;
+        card.innerHTML = `
+          <div class="row">
+            <div class="title">${escapeHTML(it.Title)}</div>
+            <a class="btn" href="${it.Link}" target="_blank" rel="noopener">지원하기</a>
+          </div>
+          <div class="row" style="gap:8px; align-items:flex-start;">
+            <div class="company">${escapeHTML(it.Company || '회사 미정')}</div>
+            <div class="meta">
+              ${it.Location? `<span class="tag">📍 ${escapeHTML(it.Location)}</span>`:''}
+              ${it.Category? `<span class="tag">🏷️ ${escapeHTML(it.Category)}</span>`:''}
+              ${deadlineHTML}
+            </div>
+          </div>
+          ${it.Notes? `<div style="color:#aab7cf; font-size:13px; line-height:1.5">${escapeHTML(it.Notes)}</div>`:''}
+        `;
+        els.grid.appendChild(card);
+      }
+    }
+
+    function renderChips(){
+      const chips = [];
+      const { q, company, location } = state.filters;
+      if(q){ chips.push(chip(`검색: ${q}`, ()=>{ state.filters.q=''; els.search.value=''; pipeline(); })); }
+      if(company){ chips.push(chip(`회사: ${company}`, ()=>{ state.filters.company=''; els.filterCompany.value=''; pipeline(); })); }
+      if(location){ chips.push(chip(`지역: ${location}`, ()=>{ state.filters.location=''; els.filterLocation.value=''; pipeline(); })); }
+      els.chips.innerHTML = '';
+      chips.forEach(c => els.chips.appendChild(c));
+    }
+
+    function chip(text, onClear){
+      const el = document.createElement('span');
+      el.className = 'chip';
+      el.innerHTML = `${escapeHTML(text)} · <a href="#" style="color:#b4c2d8; text-decoration:none">지우기</a>`;
+      el.querySelector('a').addEventListener('click', (e)=>{ e.preventDefault(); onClear(); });
+      return el;
+    }
+
+    function populateFilters(){
+      const companies = [...new Set(state.raw.map(x=>x.Company).filter(Boolean))].sort();
+      const locations = [...new Set(state.raw.map(x=>x.Location).filter(Boolean))].sort();
+
+      // 채우되, 현재 선택 유지
+      const setOptions = (sel, values, placeholder) => {
+        const cur = sel.value;
+        sel.innerHTML = `<option value="">${placeholder}</option>` + values.map(v=>`<option>${escapeHTML(v)}</option>`).join('');
+        if([...sel.options].some(o => o.value === cur)) sel.value = cur;
+      };
+
+      setOptions(els.filterCompany, companies, '회사: 전체');
+      setOptions(els.filterLocation, locations, '지역: 전체');
+    }
+
+    function formatDate(d){
+      if(!(d instanceof Date)) return '';
+      const y = d.getFullYear();
+      const m = String(d.getMonth()+1).padStart(2,'0');
+      const day = String(d.getDate()).padStart(2,'0');
+      return `${y}-${m}-${day}`;
+    }
+
+    function daysUntil(d){
+      if(!(d instanceof Date)) return Infinity;
+      const ms = d.setHours(0,0,0,0) - new Date().setHours(0,0,0,0);
+      return Math.round(ms / 86400000);
+    }
+
+    function escapeHTML(s){
+      return String(s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]));
+    }
+
+    function sampleData(){
+      // 시트 연결 전 시연용 더미 데이터
+      const toD = s => new Date(s);
+      return [
+        { Title:'삼성전자 메모리사업부 HBM PE 인턴', Company:'Samsung Electronics', Location:'천안/온양', Category:'인턴', Deadline: toD('2025-09-15'), Link:'https://example.com/apply1', CreatedAt: toD('2025-08-30'), Notes:'Camtek/Co-planarity 과제 경험 우대' },
+        { Title:'LG이노텍 Substrate R&D 산학장학생', Company:'LG Innotek', Location:'구미/파주', Category:'장학생', Deadline: toD('2025-09-25'), Link:'https://example.com/apply2', CreatedAt: toD('2025-09-01'), Notes:'유리기판 관심자 환영' },
+        { Title:'ASML Campus Promoter', Company:'ASML', Location:'수도권', Category:'대외활동', Deadline: toD('2025-09-10'), Link:'https://example.com/apply3', CreatedAt: toD('2025-08-28'), Notes:'High-NA EUV 홍보 콘텐츠 기획' }
+      ];
+    }
+
+    // 이벤트 바인딩
+    els.search.addEventListener('input', e=>{ state.filters.q = e.target.value; pipeline(); });
+    els.filterCompany.addEventListener('change', e=>{ state.filters.company = e.target.value; pipeline(); });
+    els.filterLocation.addEventListener('change', e=>{ state.filters.location = e.target.value; pipeline(); });
+    els.sort.addEventListener('change', e=>{ state.sort = e.target.value; pipeline(); });
+
+    // 최초 로드 & 10분마다 새로고침
+    fetchCSV();
+    setInterval(fetchCSV, 10 * 60 * 1000);
+  </script>
+
+  <!-- =====================
+       사용 가이드 (요약)
+       1) Google Sheets에서 열 헤더 만들기
+          Title | Company | Location | Category | Deadline | Link | CreatedAt | Notes
+       2) 파일 ▶ 웹에 게시 ▶ CSV로 게시
+       3) 위 CSV 링크를 SHEET_CSV_URL에 붙여넣기
+       4) 이 파일을 GitHub Pages, Netlify, Vercel 등 정적 호스팅에 올리면 끝!
+      ===================== -->
+</body>
+</html>
