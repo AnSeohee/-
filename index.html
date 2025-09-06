@@ -103,7 +103,7 @@
     }
 
     function splitRoles(s){
-      return String(s||"").split(/[,\u3001;\/|·•\u00B7]+/g).map(v=>v.trim()).filter(Boolean);
+      return String(s||"").split(/[,，、]+/).map(v=>v.trim()).filter(Boolean);
     }
 
     function normalizeRow(r){
@@ -240,6 +240,7 @@
   </script>
 </body>
 </html>
+
 
 
 
