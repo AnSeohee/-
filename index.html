@@ -12,7 +12,7 @@
     header { position:sticky; top:0; z-index:10; backdrop-filter:saturate(1.2) blur(8px); background:rgba(11,15,20,0.7); border-bottom:1px solid var(--line); }
     .wrap { max-width:1100px; margin:0 auto; padding:20px; }
     h1 { margin:0; font-size:26px; letter-spacing:0.2px; }
-    .controls { display:grid; grid-template-columns:1fr 180px 180px 160px; gap:10px; margin-top:14px; }
+    .controls { display:grid; grid-template-columns:1fr 180px 160px; gap:10px; margin-top:14px; }
     @media (max-width:1000px){ .controls{ grid-template-columns:1fr 1fr; } }
     input, select { width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--line); background:var(--card); color:var(--text); }
     input::placeholder { color:#6b7280; }
@@ -25,14 +25,13 @@
 
     .card { border:1px solid var(--line); background:linear-gradient(180deg, #0e1522, #0a0f18); border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:10px; box-shadow:0 6px 16px rgba(0,0,0,0.25); }
     .row { display:flex; justify-content:space-between; align-items:center; gap:12px; }
-    .row .title { flex:1; min-width:0; } /* 제목은 넓게, 버튼은 줄어들지 않게 */
+    .row .title { flex:1; min-width:0; }
     .title { font-size:16px; font-weight:700; line-height:1.35; }
     .company { color:var(--muted); font-size:13px; }
     .meta { display:flex; gap:8px; flex-wrap:wrap; }
     .tag { padding:4px 8px; border-radius:8px; border:1px solid var(--line); color:var(--muted); font-size:12px; }
     .deadline { font-weight:600; color:var(--accent); }
 
-    /* 지원/하기 두 줄 고정 버튼 */
     .btn { flex-shrink:0; display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1.15; word-break:keep-all; white-space:normal; min-width:64px; padding:10px 12px; border-radius:10px; background:var(--accent); color:#0b0f14; font-weight:700; text-decoration:none; border:0; }
     .btn .line { display:block; }
 
@@ -72,10 +71,8 @@
   </footer>
 
   <script>
-    // Google Sheet CSV 링크
-    const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRlDY1wcqL865tOwgSiUH1ooIAT7UQYIAAxSEb07KLETAE0IPYJeDZP_dWIB_gcnirFtepi_D1Aey6E/pub?output=csv";
+    const SHEET_CSV_URL = "여기에_네_시트_CSV_URL";
 
-    // 상태
     const state = { raw: [], view: [], filters: { q: "", company: "", role: "" }, sort: "deadlineAsc" };
 
     const els = {
@@ -88,7 +85,6 @@
       chips: document.getElementById('activeChips'),
     };
 
-    // CSV 로드
     async function fetchCSV(){
       try{
         const res = await fetch(SHEET_CSV_URL, { cache: 'no-store' });
@@ -103,15 +99,10 @@
       }
     }
 
-    // 직무 분리: 콤마/슬래시/세미콜론/파이프/가운뎃점 등 구분자 지원
     function splitRoles(s){
-      const raw = String(s||"");
-      return raw.split(/[,\u3001;\/|·•\u00B7]+/g)
-                .map(v=>v.trim())
-                .filter(Boolean);
+      return String(s||"").split(/[,\u3001;\/|·•\u00B7]+/g).map(v=>v.trim()).filter(Boolean);
     }
 
-    // 행 정규화
     function normalizeRow(r){
       const trim = v => (v==null?"":String(v)).trim();
       const parseDate = v => {
@@ -119,20 +110,19 @@
         const d = new Date(s);
         return isNaN(d.getTime()) ? null : d;
       };
-      const cat = trim(r.Category || r.category || r.분류 || r.직무 || "");
+      const cat = trim(r.Category || r.직무 || "");
       return {
-        Title: trim(r.Title || r.title || r.제목),
-        Company: trim(r.Company || r.company || r.회사),
-        Roles: splitRoles(cat),                 // ← 여러 직무를 배열로
-        CategoryRaw: cat,                       // 검색용 원문
-        Deadline: parseDate(r.Deadline || r.deadline || r.마감일),
-        Link: trim(r.Link || r.link || r.URL || r.링크),
-        CreatedAt: parseDate(r.CreatedAt || r.createdAt || r.created || r.작성일),
-        Notes: trim(r.Notes || r.notes || r.비고 || r.메모),
+        Title: trim(r.Title || r.제목),
+        Company: trim(r.Company || r.회사),
+        Roles: splitRoles(cat),
+        CategoryRaw: cat,
+        Deadline: parseDate(r.Deadline || r.마감일),
+        Link: trim(r.Link || r.링크),
+        CreatedAt: parseDate(r.CreatedAt || r.작성일),
+        Notes: trim(r.Notes || r.메모),
       };
     }
 
-    // 파이프라인
     function pipeline(){
       const { q, company, role } = state.filters;
       const qx = q.toLowerCase();
@@ -143,7 +133,6 @@
         return hitQ && hitC && hitR;
       });
 
-      // 정렬
       const byDeadline = (a,b) => (a.Deadline? a.Deadline.getTime(): Infinity) - (b.Deadline? b.Deadline.getTime(): Infinity);
       const byDeadlineDesc = (a,b) => (b.Deadline? b.Deadline.getTime(): -Infinity) - (a.Deadline? a.Deadline.getTime(): -Infinity);
       const byCreated = (a,b) => (a.CreatedAt? a.CreatedAt.getTime(): 0) - (b.CreatedAt? b.CreatedAt.getTime(): 0);
@@ -161,7 +150,6 @@
       renderChips();
     }
 
-    // 렌더
     function render(){
       els.grid.innerHTML = '';
       if(state.view.length === 0){ els.empty.style.display = 'block'; return; }
@@ -193,7 +181,6 @@
       }
     }
 
-    // 필터 채우기
     function populateFilters(){
       const companies = [...new Set(state.raw.map(x=>x.Company).filter(Boolean))].sort();
       const roles = [...new Set(state.raw.flatMap(x=>x.Roles||[]))].sort();
@@ -208,7 +195,6 @@
       setOptions(els.filterRole, roles, '직무: 전체');
     }
 
-    // chips
     function renderChips(){
       const chips = [];
       const { q, company, role } = state.filters;
@@ -227,39 +213,25 @@
       return el;
     }
 
-    // 유틸
     function formatDate(d){ if(!(d instanceof Date)) return ''; const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,'0'); const day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; }
     function daysUntil(d){ if(!(d instanceof Date)) return Infinity; const ms=d.setHours(0,0,0,0)-new Date().setHours(0,0,0,0); return Math.round(ms/86400000); }
     function escapeHTML(s){ return String(s||'').replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
 
-    // 더미 데이터 (시트 연결 전 테스트용)
     function sampleData(){
       const toD = s => new Date(s);
       return [
-        { Title:'신입/경력 R&D & 생산기술 채용', Company:'Hyundai Rotem', Roles:['R&D','생산기술'], Deadline: toD('2025-09-07'), Link:'https://example.com/apply0', CreatedAt: toD('2025-09-01'), Notes:'OPIc/TOEIC Speaking 제출' },
-        { Title:'HBM PE 인턴', Company:'Samsung Electronics', Roles:['R&D','PE'], Deadline: toD('2025-09-15'), Link:'https://example.com/apply1', CreatedAt: toD('2025-08-30'), Notes:'Camtek/Co-planarity 경험 우대' },
-        { Title:'Substrate 산학장학생', Company:'LG Innotek', Roles:['R&D','Staff'], Deadline: toD('2025-09-25'), Link:'https://example.com/apply2', CreatedAt: toD('2025-09-01'), Notes:'유리기판 관심자 환영' }
+        { Title:'2025년 신입사원 집중채용', Company:'현대로템', Roles:['디펜스솔루션','레일솔루션','에코플랜트','생산기술','품질','재경','경영지원'], Deadline: toD('2025-09-07'), Link:'https://example.com/apply0', CreatedAt: toD('2025-09-01'), Notes:'TOEIC Speaking 또는 OPIc 성적 제출 필수' },
+        { Title:'2025년 하반기 신입사원 수시채용', Company:'LG에너지솔루션', Roles:['R&D','생산기술','Staff'], Deadline: toD('2025-09-10'), Link:'https://example.com/apply1', CreatedAt: toD('2025-09-02'), Notes:'OPIc IH 이상 or TOEIC 160점 이상' }
       ];
     }
 
-    // 이벤트
     els.search.addEventListener('input', e=>{ state.filters.q = e.target.value; pipeline(); });
     els.filterCompany.addEventListener('change', e=>{ state.filters.company = e.target.value; pipeline(); });
     els.filterRole.addEventListener('change', e=>{ state.filters.role = e.target.value; pipeline(); });
     els.sort.addEventListener('change', e=>{ state.sort = e.target.value; pipeline(); });
 
-    // 시작
     fetchCSV();
     setInterval(fetchCSV, 10 * 60 * 1000);
   </script>
-
-  <!--
-    사용 가이드
-    1) 시트 헤더: Title | Company | Category | Deadline | Link | CreatedAt | Notes
-       - Category 셀은 'R&D, 생산기술, Staff' 처럼 여러 직무를 콤마(,) 등으로 구분
-         (지원 구분자: , / ; | · • 가운데점 등)
-    2) 파일 ▶ 웹에 게시 ▶ CSV 링크를 위 SHEET_CSV_URL에 붙여넣기
-    3) 정적 호스팅(GitHub Pages / Netlify / Vercel)에 index.html 업로드
-  -->
 </body>
 </html>
