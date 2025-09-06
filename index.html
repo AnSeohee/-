@@ -167,7 +167,7 @@
         card.innerHTML = `
           <div class="row">
             <div class="title">${escapeHTML(it.Title)}</div>
-            <a class="btn" href="${it.Link}" target="_blank" rel="noopener">지원하기</a>
+            <a class="btn" href="${it.Link}" target="_blank" rel="noopener">지원<br>하기</a>
           </div>
           <div class="row" style="gap:8px; align-items:flex-start;">
             <div class="company">${escapeHTML(it.Company || '회사 미정')}</div>
@@ -264,4 +264,5 @@
        4) 이 파일을 GitHub Pages, Netlify, Vercel 등 정적 호스팅에 올리면 끝!
       ===================== -->
 </body>
+
 </html>
