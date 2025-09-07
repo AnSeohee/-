@@ -50,6 +50,14 @@
 
     .deadline.soon { color:#fca5a5; font-weight:800; }
     .notice-danger { color:#fca5a5; font-size:12px; margin-top:6px; } /* 경고 문구 스타일 */
+
+    .fav-btn {
+      cursor:pointer;
+      font-size:18px;
+      color:#9aa7bd;
+      user-select:none;
+    }
+    .fav-btn.active { color:#fbbf24; } /* 노란색 별 */
   </style>
   <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
 </head>
@@ -66,7 +74,8 @@
           <option value="deadlineDesc">마감 늦은순</option>
           <option value="createdDesc">최신 추가순</option>
           <option value="createdAsc">오래된 추가순</option>
-          <option value="closed">마감된 공고</option><!-- 🆕 -->
+          <option value="closed">마감된 공고</option>
+          <option value="favs">즐겨찾기만</option> <!-- 🆕 -->
         </select>
       </div>
       <div class="notice-danger">※ 표기된 날짜는 마감일 기준입니다. 마감 시간은 반드시 본문에서 확인하세요!</div>
@@ -177,6 +186,11 @@
         case 'closed': default:
           // closed일 때는 마감일 내림차순(가장 최근에 마감된 게 위)로 보는 것도 괜찮음
           arr.sort(byDeadlineDesc);
+        case 'favs': {
+          const favIds = getFavs();
+          arr = arr.filter(it => favIds.includes(`${it.Company}::${it.Title}`));
+          break;
+        }
       }
 
       state.view = arr;
@@ -193,13 +207,16 @@
       const y = window.scrollY;
       els.grid.innerHTML = '';
 
-      if(state.view.length === 0){ els.empty.style.display = 'block'; 
+      if(state.view.length === 0){
+        els.empty.style.display = 'block';
         requestAnimationFrame(()=>window.scrollTo(0, y));
         return;
       }
       els.empty.style.display = 'none';
 
       const maxTags = getMaxTags();
+      const favs = getFavs(); // 즐겨찾기 목록 불러오기
+      
       for(const it of state.view){
         const card = document.createElement('div');
         card.className = 'card';
@@ -222,27 +239,39 @@
         const roleTags = shown.map(r=>`<span class="tag">🏷️ ${escapeHTML(r)}</span>`).join('');
         const plusTag = rest > 0 ? `<span class="tag plus">+${rest}</span>` : '';
 
+        // 각 공고마다 고유 id 생성 (회사+제목)
+        const id = `${it.Company}::${it.Title}`;
+        const isFav = favs.includes(id);
+
         card.innerHTML = `
           <div class="row">
             <div class="card-header">
               <div class="company">${escapeHTML(it.Company || '회사 미정')}</div>
               <div class="title">${escapeHTML(it.Title)}</div>
             </div>
-            <a class="btn" href="${it.Link}" target="_blank" rel="noopener"><span class="line">지원</span><span class="line">하기</span></a>
+            <div style="display:flex; flex-direction:column; align-items:center; gap:6px;">
+              <span class="fav-btn ${isFav?'active':''}" data-id="${escapeHTML(id)}">${isFav?'★':'☆'}</span>
+              <a class="btn" href="${it.Link}" target="_blank" rel="noopener"><span class="line">지원</span><span class="line">하기</span></a>
+            </div>
           </div>
 
-          <!-- 태그 줄 -->
-          <div class="meta">
-            ${roleTags}${plusTag}
-          </div>
-
-          <!-- 마감 줄 (항상 다음 줄로) -->
+          <div class="meta">${roleTags}${plusTag}</div>
           ${deadlineLine}
-
           ${it.Notes? `<div style="color:#aab7cf; font-size:13px; line-height:1.5; margin-top:4px;">${escapeHTML(it.Notes)}</div>`:''}
         `;
         els.grid.appendChild(card);
       }
+
+      // 즐겨찾기 버튼 이벤트
+      els.grid.querySelectorAll('.fav-btn').forEach(btn=>{
+        btn.addEventListener('click', ()=>{
+          const id = btn.dataset.id;
+          toggleFav(id);
+          btn.classList.toggle('active');
+          btn.textContent = btn.classList.contains('active') ? '★' : '☆';
+        });
+      });
+    
       requestAnimationFrame(()=>window.scrollTo(0, y));
     }
 
@@ -310,8 +339,21 @@
       resizeTid = setTimeout(() => { render(); }, 250);
     });
 
+    function getFavs(){
+      return JSON.parse(localStorage.getItem('favs')||'[]');
+    }
+    function toggleFav(id){
+      let favs = getFavs();
+      if(favs.includes(id)){
+        favs = favs.filter(x=>x!==id);
+      } else {
+        favs.push(id);
+      }
+      localStorage.setItem('favs', JSON.stringify(favs));
+    }
   </script>
 </body>
 </html>
+
 
 
