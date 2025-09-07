@@ -40,8 +40,8 @@
     .card {
       border:1px solid var(--line); background:linear-gradient(180deg, #0e1522, #0a0f18); border-radius:16px; padding:16px;
       display:flex; flex-direction:column; gap:10px; box-shadow:0 6px 16px rgba(0,0,0,0.25);
-      position:relative; transition:transform 0.2s ease-out, opacity 0.2s ease-out;
-      touch-action: pan-y; -webkit-user-drag: none; user-select: none;
+      position:relative;
+      user-select: none;
     }
     .row { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
     .card-header { flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; }
@@ -50,6 +50,7 @@
 
     .meta { display: flex; gap: 8px; flex-wrap: wrap; }
     .meta .hidden-tags { display: none; }
+    .meta.expanded .hidden-tags { display: contents; }
     .tag { padding:4px 8px; border-radius:8px; border:1px solid var(--line); color:#aab7cf; font-size:12px; white-space: nowrap; }
     .tag.clickable-tag { cursor: pointer; transition: background-color 0.2s; }
     .tag.clickable-tag:hover { background-color: rgba(255,255,255,0.07); border-color: var(--accent); }
@@ -347,25 +348,12 @@
         if (dd === 0) deadlineClass = ' today';
         else if (dd >= 0 && dd <= 3) deadlineClass = ' soon';
         const deadlineLine = `<div class="deadline${deadlineClass}">${dStr}${dDay}</div>`;
-
-        // --- 태그 로직 시작 ---
+        
         const roles = it.Roles || [];
-        const CHAR_LIMIT = 20; // 2줄에 들어갈 대략적인 글자 수 (화면 폭에 따라 조절 필요)
-        let charCount = 0;
-        let shownRoles = [];
+        const TAG_LIMIT = 4;
         
-        if (roles.length > 0) {
-          for(const role of roles) {
-            const newCount = charCount + role.length + 2; // 글자 수와 여백/아이콘 등 고려
-            if (shownRoles.length > 0 && newCount > CHAR_LIMIT) {
-              break;
-            }
-            shownRoles.push(role);
-            charCount = newCount;
-          }
-        }
-        
-        const hiddenRoles = roles.slice(shownRoles.length);
+        const shownRoles = roles.slice(0, TAG_LIMIT);
+        const hiddenRoles = roles.slice(TAG_LIMIT);
         const hasMoreTags = hiddenRoles.length > 0;
         
         const shownTagsHTML = shownRoles.map(r => `<span class="tag clickable-tag" data-role="${escapeHTML(r)}">🏷️ ${escapeHTML(r)}</span>`).join('');
@@ -374,7 +362,6 @@
         const plusToggleHTML = hasMoreTags
             ? `<button class="tag plus-toggle" data-more-text="+${hiddenRoles.length}" data-collapse-text="접기">+${hiddenRoles.length}</button>`
             : '';
-        // --- 태그 로직 끝 ---
 
         const id = `${it.Company}::${it.Title}`;
         const isFav = favs.includes(id);
@@ -399,31 +386,30 @@
           ${it.Notes? `<div style="color:#aab7cf; font-size:13px; line-height:1.5; margin-top:4px;">${escapeHTML(it.Notes)}</div>`:''}
         `;
         
-        let touchStartX = 0, touchMoveX = 0, isSwiping = false;
-        const SWIPE_THRESHOLD = 80;
-        card.addEventListener('touchstart', (e) => { if (e.touches.length === 1) { touchStartX = e.touches[0].clientX; isSwiping = false; card.style.transition = 'none'; } }, {passive:true});
-        card.addEventListener('touchmove', (e) => { if (e.touches.length === 1) { touchMoveX = e.touches[0].clientX; const diffX = touchMoveX - touchStartX; if (Math.abs(diffX) > 10) { isSwiping = true; card.style.transform = `translateX(${diffX}px)`; } } }, {passive:true});
-        card.addEventListener('touchend', (e) => {
-          card.style.transition = 'transform 0.2s ease-out, opacity 0.2s ease-out';
-          if (isSwiping) {
-            const diffX = touchMoveX - touchStartX;
-            if (Math.abs(diffX) > SWIPE_THRESHOLD) {
-              card.style.transform = `translateX(${diffX > 0 ? '100vw' : '-100vw'})`;
-              card.style.opacity = '0';
-              setTimeout(actOncePer(() => {
-                toggleHidden(id); pipeline();
-                const message = state.showHiddenOnly ? `'${it.Company}' 공고를 복원했습니다.` : `'${it.Company}' 공고를 숨겼습니다.`;
-                showToast(message, id);
-              }), 200);
-            } else { card.style.transform = 'translateX(0)'; }
-          }
-          touchStartX = 0; touchMoveX = 0; isSwiping = false;
-        });
+        // PC 우클릭 숨김
         card.addEventListener('contextmenu', actOncePer((e)=>{
-          e.preventDefault(); toggleHidden(id); pipeline();
+          e.preventDefault();
+          toggleHidden(id);
+          pipeline();
           const message = state.showHiddenOnly ? `'${it.Company}' 공고를 복원했습니다.` : `'${it.Company}' 공고를 숨겼습니다.`;
           showToast(message, id);
         }), {passive:false});
+        
+        // 모바일 꾹 누르기 숨김
+        let pressTimer = null;
+        card.addEventListener('touchstart', () => {
+          pressTimer = setTimeout(actOncePer(() => {
+            toggleHidden(id);
+            pipeline();
+            const message = state.showHiddenOnly ? `'${it.Company}' 공고를 복원했습니다.` : `'${it.Company}' 공고를 숨겼습니다.`;
+            showToast(message, id);
+          }), 500); // 500ms = 0.5초
+        }, { passive: true });
+
+        card.addEventListener('touchend', () => {
+          clearTimeout(pressTimer);
+        }, { passive: true });
+
         els.grid.appendChild(card);
       }
 
@@ -440,16 +426,18 @@
       });
       
       els.grid.querySelectorAll('.plus-toggle').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const hiddenContainer = btn.previousElementSibling;
-          const isHidden = hiddenContainer.style.display !== 'contents';
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation(); // 카드 전체의 다른 이벤트와 충돌 방지
+          const metaContainer = btn.closest('.meta');
+          const hiddenContainer = metaContainer.querySelector('.hidden-tags');
+          const isExpanded = metaContainer.classList.contains('expanded');
           
-          if (isHidden) {
-            hiddenContainer.style.display = 'contents'; // 자식 요소들을 부모에 직접 붙인 것처럼 표시
-            btn.textContent = btn.dataset.collapseText;
-          } else {
-            hiddenContainer.style.display = 'none';
+          metaContainer.classList.toggle('expanded');
+          
+          if (isExpanded) {
             btn.textContent = btn.dataset.moreText;
+          } else {
+            btn.textContent = btn.dataset.collapseText;
           }
         });
       });
@@ -527,7 +515,17 @@
       e.target.value = '';
     });
 
-    favToggles.forEach(btn=>{ btn.addEventListener('click', ()=>{ state.favsOnly = !state.favsOnly; pipeline(); }); });
+    favToggles.forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        state.favsOnly = !state.favsOnly;
+        pipeline();
+        if (state.favsOnly) {
+          showToast("즐겨찾기한 공고만 표시합니다.");
+        } else {
+          showToast("기본 공고 목록을 표시합니다.");
+        }
+      });
+    });
     hiddenToggles.forEach(btn=>{ btn.addEventListener('click', ()=>{ state.showHiddenOnly = !state.showHiddenOnly; pipeline(); if (state.showHiddenOnly) { showToast("숨긴 공고만 표시합니다."); } else { showToast("기본 공고 목록을 표시합니다."); } }); });
 
     fetchCSV();
@@ -538,5 +536,3 @@
   </script>
 </body>
 </html>
-
-
