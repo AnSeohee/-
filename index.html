@@ -50,7 +50,15 @@
     @media (max-width:1000px){ .grid { grid-template-columns:repeat(2, 1fr); } }
     @media (max-width:640px){ .grid { grid-template-columns:1fr; } }
 
-    .card { border:1px solid var(--line); background:linear-gradient(180deg, #0e1522, #0a0f18); border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:10px; box-shadow:0 6px 16px rgba(0,0,0,0.25); }
+    .card {
+      border:1px solid var(--line); background:linear-gradient(180deg, #0e1522, #0a0f18); border-radius:16px; padding:16px;
+      display:flex; flex-direction:column; gap:10px; box-shadow:0 6px 16px rgba(0,0,0,0.25);
+      position:relative; /* 스와이프를 위한 position */
+      transition:transform 0.2s ease-out, opacity 0.2s ease-out; /* 스와이프 모션 */
+      touch-action: pan-y; /* 수직 스크롤은 허용, 수평 스와이프는 감지 */
+      -webkit-user-drag: none; /* iOS Safari에서 드래그 방지 */
+      user-select: none; /* 텍스트 선택 방지 */
+    }
     .row { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
     .card-header { flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; }
     .card-header .company { font-size:14px; font-weight:600; color:var(--accent); }
@@ -114,7 +122,7 @@
 
   <footer>
     <div class="wrap">
-      Notice Board · Made by 힘들어요
+      Notice Board · Made by 자동 새로고침 10분 간격
       <div style="margin-top:8px; font-size:11px; color:#9aa7bd;">
         본 사이트의 공고 정보는 참고용으로만 제공되며,<br>
         정확한 내용과 일정은 반드시 각 회사의 공식 채용 공고를 확인하시기 바랍니다.<br>
@@ -247,7 +255,7 @@
       }
 
       const byDeadline     = (a,b) => (a.Deadline? a.Deadline.getTime():  Infinity) - (b.Deadline? b.Deadline.getTime():  Infinity);
-      const byDeadlineDesc = (a,b) => (b.Deadline? b.Deadline.getTime(): -Infinity) - (a.Deadline? a.Deadline.getTime(): -Infinity);
+      const byDeadlineDesc = (a,b) => (b.Deadline? b.Deadline.getTime(): -Infinity) - (a.Deadline? b.Deadline.getTime(): -Infinity);
 
       switch(state.sort){
         case 'deadlineAsc':  arr.sort(byDeadline);      break;
@@ -333,20 +341,61 @@
           ${it.Notes? `<div style="color:#aab7cf; font-size:13px; line-height:1.5; margin-top:4px;">${escapeHTML(it.Notes)}</div>`:''}
         `;
 
+        // 스와이프 기능 추가
+        let touchStartX = 0;
+        let touchMoveX = 0;
+        let isSwiping = false;
+        const SWIPE_THRESHOLD = 80; // 스와이프로 인정할 최소 거리
+
+        card.addEventListener('touchstart', (e) => {
+          if (e.touches.length === 1) { // 단일 터치만 처리
+            touchStartX = e.touches[0].clientX;
+            isSwiping = false;
+            card.style.transition = 'none'; // 스와이프 중에는 transition 끄기
+          }
+        }, {passive:true});
+
+        card.addEventListener('touchmove', (e) => {
+          if (e.touches.length === 1) {
+            touchMoveX = e.touches[0].clientX;
+            const diffX = touchMoveX - touchStartX;
+
+            if (Math.abs(diffX) > 10) { // 스와이프 시작으로 간주 (약간의 움직임 허용)
+              isSwiping = true;
+              card.style.transform = `translateX(${diffX}px)`;
+            }
+          }
+        }, {passive:false}); // passive:false로 설정하여 e.preventDefault() 가능하게 함
+
+        card.addEventListener('touchend', (e) => {
+          card.style.transition = 'transform 0.2s ease-out, opacity 0.2s ease-out'; // transition 다시 켜기
+
+          if (isSwiping) {
+            const diffX = touchMoveX - touchStartX;
+            if (Math.abs(diffX) > SWIPE_THRESHOLD) {
+              // 충분히 스와이프 했으면 숨김 처리
+              card.style.transform = `translateX(${diffX > 0 ? '100vw' : '-100vw'})`; // 화면 밖으로 밀어내기
+              card.style.opacity = '0';
+              setTimeout(actOncePer(() => {
+                toggleHidden(id);
+                pipeline();
+              }), 200); // 애니메이션 후 목록 갱신
+              e.preventDefault(); // 링크 클릭 방지
+            } else {
+              // 충분히 스와이프하지 않았으면 원래 위치로 복귀
+              card.style.transform = 'translateX(0)';
+            }
+          }
+          touchStartX = 0;
+          touchMoveX = 0;
+          isSwiping = false;
+        });
+
         card.addEventListener('contextmenu', actOncePer((e)=>{
           e.preventDefault();
           toggleHidden(id);
           pipeline();
         }), {passive:false});
-
-        let pressTimer=null;
-        card.addEventListener('touchstart', ()=>{
-          pressTimer = setTimeout(actOncePer(()=>{
-            toggleHidden(id);
-            pipeline();
-          }), 500);
-        }, {passive:true});
-        card.addEventListener('touchend', ()=>{ clearTimeout(pressTimer); }, {passive:true});
 
         els.grid.appendChild(card);
       }
