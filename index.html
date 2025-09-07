@@ -183,14 +183,17 @@
         case 'deadlineDesc': arr.sort(byDeadlineDesc); break;
         case 'createdAsc': arr.sort(byCreated); break;
         case 'createdDesc': arr.sort(byCreatedDesc); break;
-        case 'closed': default:
-          // closed일 때는 마감일 내림차순(가장 최근에 마감된 게 위)로 보는 것도 괜찮음
+        case 'closed':
           arr.sort(byDeadlineDesc);
+          break;
         case 'favs': {
           const favIds = getFavs();
           arr = arr.filter(it => favIds.includes(`${it.Company}::${it.Title}`));
           break;
         }
+        default:
+          arr.sort(byDeadlineDesc); // 기본 동작
+          break;
       }
 
       state.view = arr;
@@ -252,10 +255,7 @@
               </div>
               <div class="title">${escapeHTML(it.Title)}</div>
             </div>
-            <div style="display:flex; flex-direction:column; align-items:center; gap:6px;">
-              <span class="fav-btn ${isFav?'active':''}" data-id="${escapeHTML(id)}">${isFav?'★':'☆'}</span>
               <a class="btn" href="${it.Link}" target="_blank" rel="noopener"><span class="line">지원</span><span class="line">하기</span></a>
-            </div>
           </div>
 
           <div class="meta">${roleTags}${plusTag}</div>
@@ -357,6 +357,7 @@
   </script>
 </body>
 </html>
+
 
 
 
