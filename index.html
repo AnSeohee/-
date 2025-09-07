@@ -267,6 +267,7 @@
           toggleFav(id);
           btn.classList.toggle('active');
           btn.textContent = btn.classList.contains('active') ? '★' : '☆';
+          if (state.sort === 'favs') pipeline(); // ← 즐겨찾기 뷰 즉시 갱신
         });
       });
     
@@ -352,6 +353,7 @@
   </script>
 </body>
 </html>
+
 
 
 
