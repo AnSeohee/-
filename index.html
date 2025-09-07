@@ -48,11 +48,24 @@
     .card-header .company { font-size:14px; font-weight:600; color:var(--accent); }
     .card-header .title { font-size:16px; font-weight:700; line-height:1.35; }
 
-    .meta { display:flex; gap:8px; flex-wrap:wrap; }
+    .meta {
+      display: flex; gap: 8px; flex-wrap: wrap;
+      max-height: 58px; /* 2줄 높이에 해당하는 값 (폰트, padding에 따라 조절) */
+      overflow: hidden;
+      transition: max-height 0.3s ease-in-out;
+    }
+    .meta.expanded {
+      max-height: 500px; /* 펼쳤을 때 충분한 높이 */
+    }
     .tag { padding:4px 8px; border-radius:8px; border:1px solid var(--line); color:#aab7cf; font-size:12px; }
     .tag.clickable-tag { cursor: pointer; transition: background-color 0.2s; }
     .tag.clickable-tag:hover { background-color: rgba(255,255,255,0.07); border-color: var(--accent); }
-    .tag.plus { border-style:dashed; }
+    .tag.plus-toggle {
+      border-style: dashed;
+      cursor: pointer;
+      background-color: transparent; /* button 기본 스타일 제거 */
+      font-family: inherit; /* button 기본 스타일 제거 */
+    }
     .deadline { font-weight:600; color:var(--accent); }
     .deadline.soon { color:#fca5a5; font-weight:800; }
     .deadline.today { color:#ef4444; font-weight:900; }
@@ -77,7 +90,6 @@
     .toast.show { bottom: 20px; }
     #undoButton { background: transparent; border: none; color: var(--accent); font-weight: bold; cursor: pointer; padding: 0; font-size: 14px; }
     
-    /* 로딩 스피너 */
     .loader-overlay {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       background: rgba(11, 15, 20, 0.7); backdrop-filter: blur(4px);
@@ -279,7 +291,6 @@
       let arr = base.filter(it => {
         const hitQ = !qx || [it.Title, it.Company, it.CategoryRaw, it.Notes].some(v => (v||'').toLowerCase().includes(qx));
         const hitC = !company || it.Company === company;
-        // 직무 필터 로직: 선택된 직무가 하나라도 포함되면 통과
         const hitR = role.length === 0 || role.some(r => (it.Roles || []).includes(r));
         return hitQ && hitC && hitR;
       });
@@ -314,8 +325,6 @@
       hiddenToggles.forEach(btn=>{ btn.classList.toggle('active', state.showHiddenOnly); btn.setAttribute('aria-pressed', String(state.showHiddenOnly)); btn.classList.toggle('danger', true); });
     }
 
-    function getMaxTags(){ return window.innerWidth <= 640 ? 4 : 6; }
-
     function render(){
       const y = window.scrollY;
       els.grid.innerHTML = '';
@@ -326,9 +335,8 @@
         return;
       }
       els.empty.style.display = 'none';
-
-      const maxTags = getMaxTags();
-      const favs = getFavs();
+      
+      const TAG_LIMIT = 6; // 2줄을 넘지 않게 표시할 태그의 대략적인 개수
 
       for(const it of state.view){
         const card = document.createElement('div');
@@ -348,10 +356,12 @@
         const deadlineLine = `<div class="deadline${deadlineClass}">${dStr}${dDay}</div>`;
 
         const roles = it.Roles || [];
-        const shown = roles.slice(0, Math.max(0, maxTags));
-        const rest = Math.max(0, roles.length - shown.length);
-        const roleTags = shown.map(r=>`<span class="tag clickable-tag" data-role="${escapeHTML(r)}">🏷️ ${escapeHTML(r)}</span>`).join('');
-        const plusTag = rest > 0 ? `<span class="tag plus">+${rest}</span>` : '';
+        const allRoleTagsHTML = roles.map(r => `<span class="tag clickable-tag" data-role="${escapeHTML(r)}">🏷️ ${escapeHTML(r)}</span>`).join('');
+        const hasMoreTags = roles.length > TAG_LIMIT;
+
+        const plusToggleHTML = hasMoreTags
+            ? `<button class="tag plus-toggle" data-more-text="+${roles.length - TAG_LIMIT}" data-collapse-text="접기">+${roles.length - TAG_LIMIT}</button>`
+            : '';
 
         const id = `${it.Company}::${it.Title}`;
         const isFav = favs.includes(id);
@@ -367,7 +377,7 @@
             </div>
             <a class="btn" href="${it.Link}" target="_blank" rel="noopener"><span class="line">지원</span><span class="line">하기</span></a>
           </div>
-          <div class="meta">${roleTags}${plusTag}</div>
+          <div class="meta">${allRoleTagsHTML}${plusToggleHTML}</div>
           ${deadlineLine}
           ${it.Notes? `<div style="color:#aab7cf; font-size:13px; line-height:1.5; margin-top:4px;">${escapeHTML(it.Notes)}</div>`:''}
         `;
@@ -402,13 +412,27 @@
 
       els.grid.querySelectorAll('.fav-btn').forEach(btn=>{ btn.addEventListener('click', actOncePer(()=>{ const id = btn.dataset.id; toggleFav(id); const active = btn.classList.toggle('active'); btn.textContent = active ? '★' : '☆'; btn.setAttribute('aria-pressed', String(active)); if (state.favsOnly) pipeline(); })); });
       
-      // 태그 클릭 이벤트 리스너 추가
       els.grid.querySelectorAll('.clickable-tag').forEach(tag => {
         tag.addEventListener('click', () => {
           const role = tag.dataset.role;
           if (role && !state.filters.role.includes(role)) {
             state.filters.role.push(role);
             pipeline();
+          }
+        });
+      });
+
+      els.grid.querySelectorAll('.plus-toggle').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const metaContainer = btn.parentElement;
+          const isExpanded = metaContainer.classList.contains('expanded');
+          
+          metaContainer.classList.toggle('expanded');
+          
+          if (isExpanded) {
+            btn.textContent = btn.dataset.moreText;
+          } else {
+            btn.textContent = btn.dataset.collapseText;
           }
         });
       });
@@ -420,22 +444,16 @@
       const hiddenIds = getHidden();
       let relevantPosts;
     
-      // 1. 현재 뷰 모드에 따라 필터링할 공고 목록을 결정합니다.
       if (state.showHiddenOnly) {
-        // '숨김 보기' 모드일 경우: 숨겨진 공고들만 가져옵니다.
         relevantPosts = state.raw.filter(it => hiddenIds.includes(`${it.Company}::${it.Title}`));
       } else {
-        // 기본 모드일 경우: 마감되지 않았고 숨겨지지 않은 공고들만 가져옵니다.
         relevantPosts = state.raw.filter(it => !it.isClosed && !hiddenIds.includes(`${it.Company}::${it.Title}`));
       }
     
-      // 2. 위에서 추려낸 'relevantPosts' 목록을 기반으로 회사와 직무 목록을 생성합니다.
       const companies = [...new Set(relevantPosts.map(x=>x.Company).filter(Boolean))].sort();
       const roles = [...new Set(relevantPosts.flatMap(x=>x.Roles||[]))].sort();
     
       const setOptions = (sel, values, placeholder) => {
-        const curVal = sel.value;
-        // 다중 선택 필터의 경우, 현재 선택된 값들을 유지할 필요가 없으므로 curVal 관련 로직을 단순화합니다.
         sel.innerHTML = `<option value="">${placeholder}</option>` + values.map(v=>`<option>${escapeHTML(v)}</option>`).join('');
       };
     
@@ -449,7 +467,6 @@
       if(q){ chips.push(chip(`검색: ${q}`, ()=>{ state.filters.q=''; els.search.value=''; pipeline(); })); }
       if(company){ chips.push(chip(`회사: ${company}`, ()=>{ state.filters.company=''; els.filterCompany.value=''; pipeline(); })); }
       
-      // 여러 직무 필터 칩 렌더링
       role.forEach(r => {
         chips.push(chip(`직무: ${r}`, () => {
           state.filters.role = state.filters.role.filter(item => item !== r);
@@ -484,14 +501,13 @@
     els.filterCompany.addEventListener('change', e=>{ state.filters.company = e.target.value; pipeline(); });
     els.sort.addEventListener('change', e=>{ state.sort = e.target.value; pipeline(); });
 
-    // 직무 필터: 선택 시 배열에 추가하는 방식으로 변경
     els.filterRole.addEventListener('change', e => {
       const selectedRole = e.target.value;
       if (selectedRole && !state.filters.role.includes(selectedRole)) {
         state.filters.role.push(selectedRole);
         pipeline();
       }
-      e.target.value = ''; // 선택 후 드롭다운은 초기화
+      e.target.value = '';
     });
 
     favToggles.forEach(btn=>{ btn.addEventListener('click', ()=>{ state.favsOnly = !state.favsOnly; pipeline(); }); });
@@ -505,4 +521,3 @@
   </script>
 </body>
 </html>
-
