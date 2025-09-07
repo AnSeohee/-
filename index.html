@@ -123,7 +123,7 @@
           <option value="closed">마감된 공고</option>
         </select>
       </div>
-      <div class="notice-danger">※ D-DAY는 23:59 기준이며, 실제 마감 시간과 다를 수 있습니다. 공고 본문에서 정확한 시간을 꼭 확인해주세요.</div>
+      <div class="notice-danger">※ D-DAY는 23:59 기준이며, 실제 마감 시간과 다를 수 있습니다. 공식 공고에 들어가 정확한 시간을 꼭 확인해주세요.</div>
       <div class="chips" id="activeChips"></div>
     </div>
   </header>
@@ -135,7 +135,7 @@
 
   <footer>
     <div class="wrap">
-      Notice Board · Made by 자동 새로고침 10분 간격
+      Notice Board · Made by 힘들어요
       <div style="margin-top:8px; font-size:11px; color:#9aa7bd;">
         본 사이트의 공고 정보는 참고용으로만 제공되며,<br>
         정확한 내용과 일정은 반드시 각 회사의 공식 채용 공고를 확인하시기 바랍니다.<br>
@@ -417,14 +417,28 @@
     }
 
     function populateFilters(){
-      const openOnly = state.raw.filter(x => !x.isClosed);
-      const companies = [...new Set(openOnly.map(x=>x.Company).filter(Boolean))].sort();
-      const roles = [...new Set(openOnly.flatMap(x=>x.Roles||[]))].sort();
+      const hiddenIds = getHidden();
+      let relevantPosts;
+    
+      // 1. 현재 뷰 모드에 따라 필터링할 공고 목록을 결정합니다.
+      if (state.showHiddenOnly) {
+        // '숨김 보기' 모드일 경우: 숨겨진 공고들만 가져옵니다.
+        relevantPosts = state.raw.filter(it => hiddenIds.includes(`${it.Company}::${it.Title}`));
+      } else {
+        // 기본 모드일 경우: 마감되지 않았고 숨겨지지 않은 공고들만 가져옵니다.
+        relevantPosts = state.raw.filter(it => !it.isClosed && !hiddenIds.includes(`${it.Company}::${it.Title}`));
+      }
+    
+      // 2. 위에서 추려낸 'relevantPosts' 목록을 기반으로 회사와 직무 목록을 생성합니다.
+      const companies = [...new Set(relevantPosts.map(x=>x.Company).filter(Boolean))].sort();
+      const roles = [...new Set(relevantPosts.flatMap(x=>x.Roles||[]))].sort();
+    
       const setOptions = (sel, values, placeholder) => {
-        const cur = sel.value;
+        const curVal = sel.value;
+        // 다중 선택 필터의 경우, 현재 선택된 값들을 유지할 필요가 없으므로 curVal 관련 로직을 단순화합니다.
         sel.innerHTML = `<option value="">${placeholder}</option>` + values.map(v=>`<option>${escapeHTML(v)}</option>`).join('');
-        if([...sel.options].some(o => o.value === cur)) sel.value = cur;
       };
+    
       setOptions(els.filterCompany, companies, '회사: 전체');
       setOptions(els.filterRole, roles, '직무: 전체');
     }
@@ -491,3 +505,4 @@
   </script>
 </body>
 </html>
+
