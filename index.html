@@ -168,26 +168,8 @@
   <script>
     const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRlDY1wcqL865tOwgSiUH1ooIAT7UQYIAAxSEb07KLETAE0IPYJeDZP_dWIB_gcnirFtepi_D1Aey6E/pub?output=csv";
 
-    const state = {
-      raw: [], view: [],
-      filters: { q: "", company: "", role: [] },
-      sort: "deadlineAsc",
-      favsOnly: false,
-      showHiddenOnly: false,
-    };
-
-    const els = {
-      grid: document.getElementById('grid'),
-      empty: document.getElementById('empty'),
-      search: document.getElementById('search'),
-      filterCompany: document.getElementById('filterCompany'),
-      filterRole: document.getElementById('filterRole'),
-      sort: document.getElementById('sort'),
-      chips: document.getElementById('activeChips'),
-      title: document.getElementById('title'),
-      loader: document.getElementById('loader'),
-    };
-
+    const state = { raw: [], view: [], filters: { q: "", company: "", role: [] }, sort: "deadlineAsc", favsOnly: false, showHiddenOnly: false, };
+    const els = { grid: document.getElementById('grid'), empty: document.getElementById('empty'), search: document.getElementById('search'), filterCompany: document.getElementById('filterCompany'), filterRole: document.getElementById('filterRole'), sort: document.getElementById('sort'), chips: document.getElementById('activeChips'), title: document.getElementById('title'), loader: document.getElementById('loader'), };
     const favToggles = document.querySelectorAll('.toggle-favs');
     const hiddenToggles = document.querySelectorAll('.toggle-hidden');
 
@@ -195,136 +177,35 @@
     let toastTimeout = null;
     const toastElement = document.getElementById('toast');
 
-    function showToast(message, itemId = null) {
-      const toastMessage = document.getElementById('toastMessage');
-      const undoButton = document.getElementById('undoButton');
-      if (toastTimeout) clearTimeout(toastTimeout);
-      lastHiddenId = itemId;
-      toastMessage.textContent = message;
-      undoButton.style.display = itemId ? 'block' : 'none';
-      toastElement.classList.add('show');
-      toastTimeout = setTimeout(() => {
-        toastElement.classList.remove('show');
-        lastHiddenId = null;
-      }, 5000);
-    }
-
+    function showToast(message, itemId = null) { const toastMessage = document.getElementById('toastMessage'); const undoButton = document.getElementById('undoButton'); if (toastTimeout) clearTimeout(toastTimeout); lastHiddenId = itemId; toastMessage.textContent = message; undoButton.style.display = itemId ? 'block' : 'none'; toastElement.classList.add('show'); toastTimeout = setTimeout(() => { toastElement.classList.remove('show'); lastHiddenId = null; }, 5000); }
     let isActionLocked = false;
-    const actOncePer = (fn) => {
-      return function(...args) {
-        if (isActionLocked) return;
-        isActionLocked = true;
-        fn.apply(this, args);
-        setTimeout(() => { isActionLocked = false; }, 400);
-      };
-    };
+    const actOncePer = (fn) => { return function(...args) { if (isActionLocked) return; isActionLocked = true; fn.apply(this, args); setTimeout(() => { isActionLocked = false; }, 400); }; };
 
-    async function fetchCSV(){
-      els.loader.style.display = 'flex';
-      try{
-        const res = await fetch(SHEET_CSV_URL, { cache: 'no-store' });
-        const csv = await res.text();
-        const parsed = Papa.parse(csv, { header:true, skipEmptyLines:true });
-        state.raw = (parsed.data || []).map(normalizeRow).filter(x=>x.Title && x.Link);
-        pipeline();
-      }catch(e){
-        console.error(e);
-        state.raw = sampleData();
-        pipeline();
-      } finally {
-        els.loader.style.display = 'none';
-      }
-    }
-
+    async function fetchCSV(){ els.loader.style.display = 'flex'; try{ const res = await fetch(SHEET_CSV_URL, { cache: 'no-store' }); const csv = await res.text(); const parsed = Papa.parse(csv, { header:true, skipEmptyLines:true }); state.raw = (parsed.data || []).map(normalizeRow).filter(x=>x.Title && x.Link); pipeline(); }catch(e){ console.error(e); state.raw = sampleData(); pipeline(); } finally { els.loader.style.display = 'none'; } }
     function splitRoles(s){ return String(s||"").split(/[,，、]+/).map(v=>v.trim()).filter(Boolean); }
-
-    function normalizeRow(r){
-      const trim = v => (v==null?"":String(v)).trim();
-      const parseDate = v => {
-        const s = trim(v).replaceAll('/', '-');
-        const d = new Date(s);
-        return isNaN(d.getTime()) ? null : d;
-      };
-      const cat = trim(r.Category || r.category || r.분류 || r.직무 || "");
-      const deadline = parseDate(r.Deadline || r.deadline || r.마감일);
-      return {
-        Title: trim(r.Title || r.title || r.제목),
-        Company: trim(r.Company || r.company || r.회사),
-        Roles: splitRoles(cat),
-        CategoryRaw: cat,
-        Deadline: deadline,
-        Link: trim(r.Link || r.link || r.URL || r.링크),
-        CreatedAt: parseDate(r.CreatedAt || r.createdAt || r.created || r.작성일),
-        Notes: trim(r.Notes || r.notes || r.비고 || r.메모),
-        isClosed: isClosed(deadline),
-      };
-    }
-
-    function isClosed(d){
-      if(!(d instanceof Date)) return false;
-      const today = new Date(); today.setHours(0,0,0,0);
-      const dd = new Date(d);  dd.setHours(0,0,0,0);
-      return dd < today;
-    }
-
+    function normalizeRow(r){ const trim = v => (v==null?"":String(v)).trim(); const parseDate = v => { const s = trim(v).replaceAll('/', '-'); const d = new Date(s); return isNaN(d.getTime()) ? null : d; }; const cat = trim(r.Category || r.category || r.분류 || r.직무 || ""); const deadline = parseDate(r.Deadline || r.deadline || r.마감일); return { Title: trim(r.Title || r.title || r.제목), Company: trim(r.Company || r.company || r.회사), Roles: splitRoles(cat), CategoryRaw: cat, Deadline: deadline, Link: trim(r.Link || r.link || r.URL || r.링크), CreatedAt: parseDate(r.CreatedAt || r.createdAt || r.created || r.작성일), Notes: trim(r.Notes || r.notes || r.비고 || r.메모), isClosed: isClosed(deadline), }; }
+    function isClosed(d){ if(!(d instanceof Date)) return false; const today = new Date(); today.setHours(0,0,0,0); const dd = new Date(d);  dd.setHours(0,0,0,0); return dd < today; }
     function getHidden(){ return JSON.parse(localStorage.getItem('hidden')||'[]'); }
     function setHidden(list){ localStorage.setItem('hidden', JSON.stringify(list)); }
-    function toggleHidden(id){
-      const s = new Set(getHidden());
-      s.has(id) ? s.delete(id) : s.add(id);
-      setHidden([...s]);
-    }
-
+    function toggleHidden(id){ const s = new Set(getHidden()); s.has(id) ? s.delete(id) : s.add(id); setHidden([...s]); }
     function getFavs(){ return JSON.parse(localStorage.getItem('favs')||'[]'); }
-    function toggleFav(id){
-      let favs = getFavs();
-      if(favs.includes(id)){ favs = favs.filter(x=>x!==id); }
-      else { favs.push(id); }
-      localStorage.setItem('favs', JSON.stringify(favs));
-    }
+    function toggleFav(id){ let favs = getFavs(); if(favs.includes(id)){ favs = favs.filter(x=>x!==id); } else { favs.push(id); } localStorage.setItem('favs', JSON.stringify(favs)); }
 
     function pipeline(){
       const { q, company, role } = state.filters;
       const qx = q.toLowerCase();
       const hiddenIds = getHidden();
-
-      const base = state.sort === 'closed'
-        ? state.raw.filter(it => it.isClosed)
-        : state.raw.filter(it => !it.isClosed);
-
-      let arr = base.filter(it => {
-        const hitQ = !qx || [it.Title, it.Company, it.CategoryRaw, it.Notes].some(v => (v||'').toLowerCase().includes(qx));
-        const hitC = !company || it.Company === company;
-        const hitR = role.length === 0 || role.some(r => (it.Roles || []).includes(r));
-        return hitQ && hitC && hitR;
-      });
-
-      if (state.showHiddenOnly) {
-        arr = arr.filter(it => hiddenIds.includes(`${it.Company}::${it.Title}`));
-      } else {
-        arr = arr.filter(it => !hiddenIds.includes(`${it.Company}::${it.Title}`));
-      }
-
-      if (state.favsOnly) {
-        const favIds = getFavs();
-        arr = arr.filter(it => favIds.includes(`${it.Company}::${it.Title}`));
-      }
-
+      const base = state.sort === 'closed' ? state.raw.filter(it => it.isClosed) : state.raw.filter(it => !it.isClosed);
+      let arr = base.filter(it => { const hitQ = !qx || [it.Title, it.Company, it.CategoryRaw, it.Notes].some(v => (v||'').toLowerCase().includes(qx)); const hitC = !company || it.Company === company; const hitR = role.length === 0 || role.some(r => (it.Roles || []).includes(r)); return hitQ && hitC && hitR; });
+      if (state.showHiddenOnly) { arr = arr.filter(it => hiddenIds.includes(`${it.Company}::${it.Title}`)); } else { arr = arr.filter(it => !hiddenIds.includes(`${it.Company}::${it.Title}`)); }
+      if (state.favsOnly) { const favIds = getFavs(); arr = arr.filter(it => favIds.includes(`${it.Company}::${it.Title}`)); }
       const byDeadline = (a,b) => (a.Deadline?.getTime() || Infinity) - (b.Deadline?.getTime() || Infinity);
       const byDeadlineDesc = (a,b) => (b.Deadline?.getTime() || -Infinity) - (a.Deadline?.getTime() || -Infinity);
-
-      switch(state.sort){
-        case 'deadlineAsc':  arr.sort(byDeadline); break;
-        case 'deadlineDesc': arr.sort(byDeadlineDesc); break;
-        case 'closed': arr.sort(byDeadlineDesc); break;
-        default: arr.sort(byDeadlineDesc); break;
-      }
-
+      switch(state.sort){ case 'deadlineAsc': arr.sort(byDeadline); break; case 'deadlineDesc': arr.sort(byDeadlineDesc); break; case 'closed': arr.sort(byDeadlineDesc); break; default: arr.sort(byDeadlineDesc); break; }
       state.view = arr;
       render();
       populateFilters();
       renderChips();
-
       favToggles.forEach(btn=>{ btn.classList.toggle('active', state.favsOnly); btn.setAttribute('aria-pressed', String(state.favsOnly)); });
       hiddenToggles.forEach(btn=>{ btn.classList.toggle('active', state.showHiddenOnly); btn.setAttribute('aria-pressed', String(state.showHiddenOnly)); btn.classList.toggle('danger', true); });
     }
@@ -341,38 +222,25 @@
       els.empty.style.display = 'none';
       
       const favs = getFavs();
-      
+      const TAG_LIMIT = 4;
+
       for(const it of state.view){
         const card = document.createElement('div');
         card.className = 'card';
-
         const dStr = it.Deadline ? formatDate(it.Deadline) : '마감 미정';
         const dd = daysUntil(it.Deadline);
         let dDay = '';
-        if (Number.isFinite(dd)) {
-          if (dd > 0) dDay = ` · D-${dd}`;
-          else if (dd === 0) dDay = ` · D-Day`;
-          else dDay = ` · D+${Math.abs(dd)}`;
-        }
+        if (Number.isFinite(dd)) { if (dd > 0) dDay = ` · D-${dd}`; else if (dd === 0) dDay = ` · D-Day`; else dDay = ` · D+${Math.abs(dd)}`; }
         let deadlineClass = '';
-        if (dd === 0) deadlineClass = ' today';
-        else if (dd >= 0 && dd <= 3) deadlineClass = ' soon';
+        if (dd === 0) deadlineClass = ' today'; else if (dd >= 0 && dd <= 3) deadlineClass = ' soon';
         const deadlineLine = `<div class="deadline${deadlineClass}">${dStr}${dDay}</div>`;
-        
         const roles = it.Roles || [];
-        const TAG_LIMIT = 4;
-        
         const shownRoles = roles.slice(0, TAG_LIMIT);
         const hiddenRoles = roles.slice(TAG_LIMIT);
         const hasMoreTags = hiddenRoles.length > 0;
-        
         const shownTagsHTML = shownRoles.map(r => `<span class="tag clickable-tag" data-role="${escapeHTML(r)}">🏷️ ${escapeHTML(r)}</span>`).join('');
         const hiddenTagsHTML = hiddenRoles.map(r => `<span class="tag clickable-tag" data-role="${escapeHTML(r)}">🏷️ ${escapeHTML(r)}</span>`).join('');
-        
-        const plusToggleHTML = hasMoreTags
-            ? `<button class="tag plus-toggle" data-more-text="+${hiddenRoles.length}" data-collapse-text="접기">+${hiddenRoles.length}</button>`
-            : '';
-
+        const plusToggleHTML = hasMoreTags ? `<button class="tag plus-toggle" data-more-text="+${hiddenRoles.length}" data-collapse-text="접기">+${hiddenRoles.length}</button>` : '';
         const id = `${it.Company}::${it.Title}`;
         const isFav = favs.includes(id);
 
@@ -396,57 +264,16 @@
           ${it.Notes? `<div style="color:#aab7cf; font-size:13px; line-height:1.5; margin-top:4px;">${escapeHTML(it.Notes)}</div>`:''}
         `;
         
-        card.addEventListener('contextmenu', actOncePer((e)=>{
-          e.preventDefault();
-          toggleHidden(id);
-          pipeline();
-          const message = state.showHiddenOnly ? `'${it.Company}' 공고를 복원했습니다.` : `'${it.Company}' 공고를 숨겼습니다.`;
-          showToast(message, id);
-        }), {passive:false});
-        
+        card.addEventListener('contextmenu', actOncePer((e)=>{ e.preventDefault(); toggleHidden(id); pipeline(); const message = state.showHiddenOnly ? `'${it.Company}' 공고를 복원했습니다.` : `'${it.Company}' 공고를 숨겼습니다.`; showToast(message, id); }), {passive:false});
         let pressTimer = null;
-        card.addEventListener('touchstart', () => {
-          pressTimer = setTimeout(actOncePer(() => {
-            toggleHidden(id);
-            pipeline();
-            const message = state.showHiddenOnly ? `'${it.Company}' 공고를 복원했습니다.` : `'${it.Company}' 공고를 숨겼습니다.`;
-            showToast(message, id);
-          }), 500);
-        }, { passive: true });
-        card.addEventListener('touchend', () => {
-          clearTimeout(pressTimer);
-        }, { passive: true });
-
+        card.addEventListener('touchstart', () => { pressTimer = setTimeout(actOncePer(() => { toggleHidden(id); pipeline(); const message = state.showHiddenOnly ? `'${it.Company}' 공고를 복원했습니다.` : `'${it.Company}' 공고를 숨겼습니다.`; showToast(message, id); }), 500); }, { passive: true });
+        card.addEventListener('touchend', () => { clearTimeout(pressTimer); }, { passive: true });
         els.grid.appendChild(card);
       }
 
       els.grid.querySelectorAll('.fav-btn').forEach(btn=>{ btn.addEventListener('click', actOncePer(()=>{ const id = btn.dataset.id; toggleFav(id); const active = btn.classList.toggle('active'); btn.textContent = active ? '★' : '☆'; btn.setAttribute('aria-pressed', String(active)); if (state.favsOnly) pipeline(); })); });
-      
-      els.grid.querySelectorAll('.clickable-tag').forEach(tag => {
-        tag.addEventListener('click', () => {
-          const role = tag.dataset.role;
-          if (role && !state.filters.role.includes(role)) {
-            state.filters.role.push(role);
-            pipeline();
-          }
-        });
-      });
-      
-      els.grid.querySelectorAll('.plus-toggle').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const metaContainer = btn.closest('.meta');
-          const isExpanded = metaContainer.classList.contains('expanded');
-          
-          metaContainer.classList.toggle('expanded');
-          
-          if (isExpanded) {
-            btn.textContent = btn.dataset.moreText;
-          } else {
-            btn.textContent = btn.dataset.collapseText;
-          }
-        });
-      });
+      els.grid.querySelectorAll('.clickable-tag').forEach(tag => { tag.addEventListener('click', () => { const role = tag.dataset.role; if (role && !state.filters.role.includes(role)) { state.filters.role.push(role); pipeline(); } }); });
+      els.grid.querySelectorAll('.plus-toggle').forEach(btn => { btn.addEventListener('click', (e) => { e.stopPropagation(); const metaContainer = btn.closest('.meta'); const isExpanded = metaContainer.classList.contains('expanded'); metaContainer.classList.toggle('expanded'); if (isExpanded) { btn.textContent = btn.dataset.moreText; } else { btn.textContent = btn.dataset.collapseText; } }); });
       
       requestAnimationFrame(()=>window.scrollTo(0, y));
     }
@@ -454,95 +281,32 @@
     function populateFilters(){
       const hiddenIds = getHidden();
       let relevantPosts;
-    
-      if (state.showHiddenOnly) {
-        relevantPosts = state.raw.filter(it => hiddenIds.includes(`${it.Company}::${it.Title}`));
-      } else {
-        relevantPosts = state.raw.filter(it => !it.isClosed && !hiddenIds.includes(`${it.Company}::${it.Title}`));
-      }
-    
+      if (state.showHiddenOnly) { relevantPosts = state.raw.filter(it => hiddenIds.includes(`${it.Company}::${it.Title}`)); } else { relevantPosts = state.raw.filter(it => !it.isClosed && !hiddenIds.includes(`${it.Company}::${it.Title}`)); }
       const companies = [...new Set(relevantPosts.map(x=>x.Company).filter(Boolean))].sort();
       const roles = [...new Set(relevantPosts.flatMap(x=>x.Roles||[]))].sort();
-    
-      const setOptions = (sel, values, placeholder) => {
-        sel.innerHTML = `<option value="">${placeholder}</option>` + values.map(v=>`<option>${escapeHTML(v)}</option>`).join('');
-      };
-    
+      const setOptions = (sel, values, placeholder) => { sel.innerHTML = `<option value="">${placeholder}</option>` + values.map(v=>`<option>${escapeHTML(v)}</option>`).join(''); };
       setOptions(els.filterCompany, companies, '회사: 전체');
       setOptions(els.filterRole, roles, '직무: 전체');
     }
 
-    function renderChips(){
-      const chips = [];
-      const { q, company, role } = state.filters;
-      if(q){ chips.push(chip(`검색: ${q}`, ()=>{ state.filters.q=''; els.search.value=''; pipeline(); })); }
-      if(company){ chips.push(chip(`회사: ${company}`, ()=>{ state.filters.company=''; els.filterCompany.value=''; pipeline(); })); }
-      
-      role.forEach(r => {
-        chips.push(chip(`직무: ${r}`, () => {
-          state.filters.role = state.filters.role.filter(item => item !== r);
-          pipeline();
-        }));
-      });
-
-      els.chips.innerHTML = '';
-      chips.forEach(c => els.chips.appendChild(c));
-    }
-
-    function chip(text, onClear){
-      const el = document.createElement('span');
-      el.className = 'chip';
-      el.innerHTML = `${escapeHTML(text)} · <a href="#" style="color:#b4c2d8; text-decoration:none">지우기</a>`;
-      el.querySelector('a').addEventListener('click', (e)=>{ e.preventDefault(); onClear(); });
-      return el;
-    }
-
+    function renderChips(){ const chips = []; const { q, company, role } = state.filters; if(q){ chips.push(chip(`검색: ${q}`, ()=>{ state.filters.q=''; els.search.value=''; pipeline(); })); } if(company){ chips.push(chip(`회사: ${company}`, ()=>{ state.filters.company=''; els.filterCompany.value=''; pipeline(); })); } role.forEach(r => { chips.push(chip(`직무: ${r}`, () => { state.filters.role = state.filters.role.filter(item => item !== r); pipeline(); })); }); els.chips.innerHTML = ''; chips.forEach(c => els.chips.appendChild(c)); }
+    function chip(text, onClear){ const el = document.createElement('span'); el.className = 'chip'; el.innerHTML = `${escapeHTML(text)} · <a href="#" style="color:#b4c2d8; text-decoration:none">`; el.querySelector('a').addEventListener('click', (e)=>{ e.preventDefault(); onClear(); }); return el; }
     function formatDate(d){ if(!d) return ''; const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,'0'); const day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; }
     function daysUntil(d){ if(!d) return Infinity; const ms=new Date(d).setHours(23,59,59,999) - Date.now(); return Math.floor(ms/86400000); }
     function escapeHTML(s){ return String(s||'').replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
-
-    function sampleData(){
-      const toD = s => new Date(s);
-      return [ { Title:'샘플 채용', Company:'Sample Corp', Roles:['R&D','생산기술'], Deadline: toD('2025-10-10'), Link:'#', CreatedAt: toD('2025-09-01'), Notes:'이건 샘플입니다.', isClosed:false } ];
-    }
+    function sampleData(){ const toD = s => new Date(s); return [ { Title:'샘플 채용', Company:'Sample Corp', Roles:['R&D','생산기술'], Deadline: toD('2025-10-10'), Link:'#', CreatedAt: toD('2025-09-01'), Notes:'이건 샘플입니다.', isClosed:false } ]; }
 
     document.getElementById('undoButton').addEventListener('click', () => { if (lastHiddenId) { toggleHidden(lastHiddenId); pipeline(); toastElement.classList.remove('show'); clearTimeout(toastTimeout); lastHiddenId = null; } });
     els.title.addEventListener('click', () => { location.reload(); });
     els.search.addEventListener('input', e=>{ state.filters.q = e.target.value; pipeline(); });
     els.filterCompany.addEventListener('change', e=>{ state.filters.company = e.target.value; pipeline(); });
     els.sort.addEventListener('change', e=>{ state.sort = e.target.value; pipeline(); });
-
-    els.filterRole.addEventListener('change', e => {
-      const selectedRole = e.target.value;
-      if (selectedRole && !state.filters.role.includes(selectedRole)) {
-        state.filters.role.push(selectedRole);
-        pipeline();
-      }
-      e.target.value = '';
-    });
-
-    favToggles.forEach(btn=>{
-      btn.addEventListener('click', ()=>{
-        state.favsOnly = !state.favsOnly;
-        pipeline();
-        if (state.favsOnly) {
-          showToast("즐겨찾기한 공고만 표시합니다.");
-        }
-      });
-    });
-    hiddenToggles.forEach(btn=>{
-      btn.addEventListener('click', ()=>{
-        state.showHiddenOnly = !state.showHiddenOnly;
-        pipeline();
-        if (state.showHiddenOnly) {
-          showToast("숨긴 공고만 표시합니다.");
-        }
-      });
-    });
+    els.filterRole.addEventListener('change', e => { const selectedRole = e.target.value; if (selectedRole && !state.filters.role.includes(selectedRole)) { state.filters.role.push(selectedRole); pipeline(); } e.target.value = ''; });
+    favToggles.forEach(btn=>{ btn.addEventListener('click', ()=>{ state.favsOnly = !state.favsOnly; pipeline(); if (state.favsOnly) { showToast("즐겨찾기한 공고만 표시합니다."); } }); });
+    hiddenToggles.forEach(btn=>{ btn.addEventListener('click', ()=>{ state.showHiddenOnly = !state.showHiddenOnly; pipeline(); if (state.showHiddenOnly) { showToast("숨긴 공고만 표시합니다."); } }); });
 
     fetchCSV();
     setInterval(fetchCSV, 10 * 60 * 1000);
-
     let resizeTid;
     window.addEventListener('orientationchange', () => { clearTimeout(resizeTid); resizeTid = setTimeout(() => { render(); }, 250); });
   </script>
