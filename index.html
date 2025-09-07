@@ -13,9 +13,32 @@
     .wrap { max-width:1100px; margin:0 auto; padding:20px; }
     h1 { margin:0; font-size:26px; letter-spacing:0.2px; }
 
-    /* 컨트롤: 한 줄 배치 */
-    .controls { display:grid; grid-template-columns:1fr 180px 180px 160px; gap:10px; margin-top:14px; }
-    @media (max-width:1000px){ .controls{ grid-template-columns:1fr 1fr; } } /* 좁으면 자동 2줄 */
+    /* 제목 줄 + 우측 별 토글(모바일 표시) */
+    .header-row { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+
+    /* 별 버튼 공통 */
+    .icon-toggle{
+      display:flex; align-items:center; justify-content:center;
+      width:42px; height:42px;
+      border:1px solid var(--line); border-radius:10px;
+      background:var(--card); color:#9aa7bd; font-size:18px;
+      cursor:pointer; user-select:none;
+    }
+    .icon-toggle.active{ color:#fbbf24; border-color:#fbbf24; }
+
+    /* 컨트롤: PC=검색/회사/직무/정렬/별(5칸), 모바일=2열 */
+    .controls { display:grid; grid-template-columns:1fr 180px 180px 160px 44px; gap:10px; margin-top:14px; }
+    @media (max-width:1000px){ .controls{ grid-template-columns:1fr 1fr; } }
+
+    /* 별 버튼 위치 전환: 모바일=헤더용 표시, PC=컨트롤용 표시 */
+    @media (max-width:1000px){
+      .toggle-favs--controls{ display:none; }
+      .toggle-favs--header{ display:flex; }
+    }
+    @media (min-width:1001px){
+      .toggle-favs--controls{ display:flex; }
+      .toggle-favs--header{ display:none; }
+    }
 
     input, select { width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--line); background:var(--card); color:var(--text); }
     input::placeholder { color:#6b7280; }
@@ -39,7 +62,7 @@
     .btn { flex-shrink:0; display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1.15; word-break:keep-all; white-space:normal; min-width:64px; padding:10px 12px; border-radius:10px; background:var(--accent); color:#0b0f14; font-weight:700; text-decoration:none; border:0; }
     .btn .line { display:block; }
 
-    /* 회사/제목 두 줄 헤더 */
+    /* 카드 헤더 */
     .card-header { display:flex; flex-direction:column; gap:4px; }
     .card-header .company { font-size:14px; font-weight:600; color:var(--accent); }
     .card-header .title { font-size:16px; font-weight:700; line-height:1.35; }
@@ -49,22 +72,23 @@
     .hint { font-size:12px; color:#9aa7bd; margin-top:6px; }
 
     .deadline.soon { color:#fca5a5; font-weight:800; }
-    .notice-danger { color:#fca5a5; font-size:12px; margin-top:6px; } /* 경고 문구 스타일 */
+    .notice-danger { color:#fca5a5; font-size:12px; margin-top:6px; }
 
-    .fav-btn {
-      cursor:pointer;
-      font-size:18px;
-      color:#9aa7bd;
-      user-select:none;
-    }
-    .fav-btn.active { color:#fbbf24; } /* 노란색 별 */
+    .fav-btn { cursor:pointer; font-size:18px; color:#9aa7bd; user-select:none; }
+    .fav-btn.active { color:#fbbf24; }
   </style>
   <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
 </head>
 <body>
   <header>
-    <div class="wrap">
+    <!-- 제목 줄: 모바일에서 별 표시 -->
+    <div class="wrap header-row">
       <h1>공고 보드</h1>
+      <button class="icon-toggle toggle-favs toggle-favs--header" type="button" aria-pressed="false" title="즐겨찾기만 보기">☆</button>
+    </div>
+
+    <!-- 컨트롤 줄: PC에서 별 표시 -->
+    <div class="wrap">
       <div class="controls">
         <input id="search" type="search" placeholder="검색: 제목, 회사, 키워드..." />
         <select id="filterCompany"><option value="">회사: 전체</option></select>
@@ -73,8 +97,8 @@
           <option value="deadlineAsc">마감 임박순</option>
           <option value="deadlineDesc">마감 늦은순</option>
           <option value="closed">마감된 공고</option>
-          <option value="favs">즐겨찾기만</option> <!-- 🆕 -->
         </select>
+        <button class="icon-toggle toggle-favs toggle-favs--controls" type="button" aria-pressed="false" title="즐겨찾기만 보기">☆</button>
       </div>
       <div class="notice-danger">※ 표기된 날짜는 마감일 기준입니다. 마감 시간은 반드시 본문에서 확인하세요!</div>
       <div class="chips" id="activeChips"></div>
@@ -93,7 +117,8 @@
   <script>
     const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRlDY1wcqL865tOwgSiUH1ooIAT7UQYIAAxSEb07KLETAE0IPYJeDZP_dWIB_gcnirFtepi_D1Aey6E/pub?output=csv";
 
-    const state = { raw: [], view: [], filters: { q: "", company: "", role: "" }, sort: "deadlineAsc" };
+    // 즐겨찾기 독립 상태 포함
+    const state = { raw: [], view: [], filters: { q: "", company: "", role: "" }, sort: "deadlineAsc", favsOnly: false };
 
     const els = {
       grid: document.getElementById('grid'),
@@ -104,6 +129,8 @@
       sort: document.getElementById('sort'),
       chips: document.getElementById('activeChips'),
     };
+    // PC/모바일 두 위치의 별 버튼 모두 선택
+    const favToggles = document.querySelectorAll('.toggle-favs');
 
     async function fetchCSV(){
       try{
@@ -119,7 +146,6 @@
       }
     }
 
-    // 쉼표만 기준으로 직무 분리
     function splitRoles(s){
       return String(s||"").split(/[,，、]+/).map(v=>v.trim()).filter(Boolean);
     }
@@ -142,15 +168,14 @@
         Link: trim(r.Link || r.link || r.URL || r.링크),
         CreatedAt: parseDate(r.CreatedAt || r.createdAt || r.created || r.작성일),
         Notes: trim(r.Notes || r.notes || r.비고 || r.메모),
-        isClosed: isClosed(deadline), // 🆕 마감 여부
+        isClosed: isClosed(deadline),
       };
     }
 
     function isClosed(d){
-      if(!(d instanceof Date)) return false; // 마감일 없으면 오픈 취급
-      // D-0(오늘)은 마감 아님. 어제 이전이면 마감.
+      if(!(d instanceof Date)) return false;
       const today = new Date(); today.setHours(0,0,0,0);
-      const dd = new Date(d); dd.setHours(0,0,0,0);
+      const dd = new Date(d);  dd.setHours(0,0,0,0);
       return dd < today;
     }
 
@@ -158,7 +183,7 @@
       const { q, company, role } = state.filters;
       const qx = q.toLowerCase();
 
-      // 정렬이 'closed'가 아니면 오픈 공고만
+      // 'closed'가 아니면 오픈 공고만
       const base = state.sort === 'closed'
         ? state.raw.filter(it => it.isClosed)
         : state.raw.filter(it => !it.isClosed);
@@ -170,36 +195,36 @@
         return hitQ && hitC && hitR;
       });
 
+      // 즐겨찾기 필터(정렬과 독립)
+      if (state.favsOnly) {
+        const favIds = getFavs();
+        arr = arr.filter(it => favIds.includes(`${it.Company}::${it.Title}`));
+      }
+
       // 정렬
-      const byDeadline = (a,b) => (a.Deadline? a.Deadline.getTime(): Infinity) - (b.Deadline? b.Deadline.getTime(): Infinity);
+      const byDeadline     = (a,b) => (a.Deadline? a.Deadline.getTime():  Infinity) - (b.Deadline? b.Deadline.getTime():  Infinity);
       const byDeadlineDesc = (a,b) => (b.Deadline? b.Deadline.getTime(): -Infinity) - (a.Deadline? a.Deadline.getTime(): -Infinity);
 
       switch(state.sort){
-        case 'deadlineAsc': arr.sort(byDeadline); break;
-        case 'deadlineDesc': arr.sort(byDeadlineDesc); break;
-        case 'closed':
-          arr.sort(byDeadlineDesc);
-          break;
-        case 'favs': {
-          const favIds = getFavs();
-          arr = arr.filter(it => favIds.includes(`${it.Company}::${it.Title}`));
-          arr.sort(byDeadline); // ← 즐겨찾기 뷰에서도 임박순
-          break;
-        }
-        default:
-          arr.sort(byDeadlineDesc); // 기본 동작
-          break;
+        case 'deadlineAsc':  arr.sort(byDeadline);      break;
+        case 'deadlineDesc': arr.sort(byDeadlineDesc);  break;
+        case 'closed':       arr.sort(byDeadlineDesc);  break;
+        default:             arr.sort(byDeadlineDesc);  break;
       }
 
       state.view = arr;
       render();
-      populateFilters();  // 📝 오픈 공고만 기준으로 옵션 생성
+      populateFilters();
       renderChips();
+
+      // 두 위치의 별 버튼 UI 동기화
+      favToggles.forEach(btn=>{
+        btn.classList.toggle('active', state.favsOnly);
+        btn.setAttribute('aria-pressed', String(state.favsOnly));
+      });
     }
 
-    function getMaxTags(){
-      return window.innerWidth <= 640 ? 4 : 6; // 모바일은 4개, 그 외 6개로 제한 → 2줄 내 수렴
-    }
+    function getMaxTags(){ return window.innerWidth <= 640 ? 4 : 6; }
 
     function render(){
       const y = window.scrollY;
@@ -213,8 +238,8 @@
       els.empty.style.display = 'none';
 
       const maxTags = getMaxTags();
-      const favs = getFavs(); // 즐겨찾기 목록 불러오기
-      
+      const favs = getFavs();
+
       for(const it of state.view){
         const card = document.createElement('div');
         card.className = 'card';
@@ -223,21 +248,19 @@
         const dd = daysUntil(it.Deadline);
         let dDay = '';
         if (Number.isFinite(dd)) {
-          if (dd > 0)      dDay = ` · D-${dd}`;           // 마감까지 N일
-          else if (dd === 0) dDay = ` · D-Day`;             // 오늘 마감 (마감 아님)
-          else             dDay = ` · D+${Math.abs(dd)}`; // 마감 지난지 N일
+          if (dd > 0)        dDay = ` · D-${dd}`;
+          else if (dd === 0) dDay = ` · D-Day`;
+          else               dDay = ` · D+${Math.abs(dd)}`;
         }
         const soonClass = (dd >= 0 && dd <= 3) ? ' soon' : '';
         const deadlineLine = `<div class="deadline${soonClass}">${dStr}${dDay}</div>`;
 
-        // 태그 줄: 최대 N개, 남으면 +n 표시
         const roles = it.Roles || [];
         let shown = roles.slice(0, Math.max(0, maxTags));
         let rest = Math.max(0, roles.length - shown.length);
         const roleTags = shown.map(r=>`<span class="tag">🏷️ ${escapeHTML(r)}</span>`).join('');
         const plusTag = rest > 0 ? `<span class="tag plus">+${rest}</span>` : '';
 
-        // 각 공고마다 고유 id 생성 (회사+제목)
         const id = `${it.Company}::${it.Title}`;
         const isFav = favs.includes(id);
 
@@ -250,7 +273,7 @@
               </div>
               <div class="title">${escapeHTML(it.Title)}</div>
             </div>
-              <a class="btn" href="${it.Link}" target="_blank" rel="noopener"><span class="line">지원</span><span class="line">하기</span></a>
+            <a class="btn" href="${it.Link}" target="_blank" rel="noopener"><span class="line">지원</span><span class="line">하기</span></a>
           </div>
 
           <div class="meta">${roleTags}${plusTag}</div>
@@ -260,22 +283,21 @@
         els.grid.appendChild(card);
       }
 
-      // 즐겨찾기 버튼 이벤트
+      // 카드 내 즐겨찾기 토글: 즐겨찾기 보기 중이면 즉시 재필터
       els.grid.querySelectorAll('.fav-btn').forEach(btn=>{
         btn.addEventListener('click', ()=>{
           const id = btn.dataset.id;
           toggleFav(id);
           btn.classList.toggle('active');
           btn.textContent = btn.classList.contains('active') ? '★' : '☆';
-          if (state.sort === 'favs') pipeline(); // ← 즐겨찾기 뷰 즉시 갱신
+          if (state.favsOnly) pipeline();
         });
       });
-    
+
       requestAnimationFrame(()=>window.scrollTo(0, y));
     }
 
     function populateFilters(){
-      // 오픈 공고만 기준으로 회사/직무 목록 생성 (마감된 공고 제외)
       const openOnly = state.raw.filter(x => !x.isClosed);
       const companies = [...new Set(openOnly.map(x=>x.Company).filter(Boolean))].sort();
       const roles = [...new Set(openOnly.flatMap(x=>x.Roles||[]))].sort();
@@ -296,6 +318,7 @@
       if(q){ chips.push(chip(`검색: ${q}`, ()=>{ state.filters.q=''; els.search.value=''; pipeline(); })); }
       if(company){ chips.push(chip(`회사: ${company}`, ()=>{ state.filters.company=''; els.filterCompany.value=''; pipeline(); })); }
       if(role){ chips.push(chip(`직무: ${role}`, ()=>{ state.filters.role=''; els.filterRole.value=''; pipeline(); })); }
+      if(state.favsOnly){ chips.push(chip('즐겨찾기만', ()=>{ state.favsOnly=false; pipeline(); })); }
       els.chips.innerHTML = '';
       chips.forEach(c => els.chips.appendChild(c));
     }
@@ -327,6 +350,14 @@
     els.filterRole.addEventListener('change', e=>{ state.filters.role = e.target.value; pipeline(); });
     els.sort.addEventListener('change', e=>{ state.sort = e.target.value; pipeline(); });
 
+    // 전역 즐겨찾기 토글: 두 버튼 모두 같은 동작
+    favToggles.forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        state.favsOnly = !state.favsOnly;
+        pipeline(); // 즉시 재적용
+      });
+    });
+
     // 시작
     fetchCSV();
     setInterval(fetchCSV, 10 * 60 * 1000);
@@ -338,26 +369,13 @@
       resizeTid = setTimeout(() => { render(); }, 250);
     });
 
-    function getFavs(){
-      return JSON.parse(localStorage.getItem('favs')||'[]');
-    }
+    function getFavs(){ return JSON.parse(localStorage.getItem('favs')||'[]'); }
     function toggleFav(id){
       let favs = getFavs();
-      if(favs.includes(id)){
-        favs = favs.filter(x=>x!==id);
-      } else {
-        favs.push(id);
-      }
+      if(favs.includes(id)){ favs = favs.filter(x=>x!==id); }
+      else { favs.push(id); }
       localStorage.setItem('favs', JSON.stringify(favs));
     }
   </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
