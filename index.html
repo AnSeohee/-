@@ -290,7 +290,7 @@
     }
 
     function renderChips(){ const chips = []; const { q, company, role } = state.filters; if(q){ chips.push(chip(`검색: ${q}`, ()=>{ state.filters.q=''; els.search.value=''; pipeline(); })); } if(company){ chips.push(chip(`회사: ${company}`, ()=>{ state.filters.company=''; els.filterCompany.value=''; pipeline(); })); } role.forEach(r => { chips.push(chip(`직무: ${r}`, () => { state.filters.role = state.filters.role.filter(item => item !== r); pipeline(); })); }); els.chips.innerHTML = ''; chips.forEach(c => els.chips.appendChild(c)); }
-    function chip(text, onClear){ const el = document.createElement('span'); el.className = 'chip'; el.innerHTML = `${escapeHTML(text)} · <a href="#" style="color:#b4c2d8; text-decoration:none">`; el.querySelector('a').addEventListener('click', (e)=>{ e.preventDefault(); onClear(); }); return el; }
+    function chip(text, onClear){ const el = document.createElement('span'); el.className = 'chip'; el.innerHTML = `${escapeHTML(text)} · <a href="#" style="color:#b4c2d8; text-decoration:none">지우기</a>`; el.querySelector('a').addEventListener('click', (e)=>{ e.preventDefault(); onClear(); }); return el; }
     function formatDate(d){ if(!d) return ''; const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,'0'); const day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; }
     function daysUntil(d){ if(!d) return Infinity; const ms=new Date(d).setHours(23,59,59,999) - Date.now(); return Math.floor(ms/86400000); }
     function escapeHTML(s){ return String(s||'').replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
