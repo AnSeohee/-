@@ -12,8 +12,11 @@
     header { position:sticky; top:0; z-index:10; backdrop-filter:saturate(1.2) blur(8px); background:rgba(11,15,20,0.7); border-bottom:1px solid var(--line); }
     .wrap { max-width:1100px; margin:0 auto; padding:20px; }
     h1 { margin:0; font-size:26px; letter-spacing:0.2px; }
+
+    /* 컨트롤: 한 줄 배치 */
     .controls { display:grid; grid-template-columns:1fr 180px 180px 160px; gap:10px; margin-top:14px; }
-    @media (max-width:1000px){ .controls{ grid-template-columns:1fr 1fr; } }
+    @media (max-width:1000px){ .controls{ grid-template-columns:1fr 1fr; } } /* 좁으면 자동 2줄 */
+
     input, select { width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--line); background:var(--card); color:var(--text); }
     input::placeholder { color:#6b7280; }
     .chips { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
@@ -24,17 +27,19 @@
     @media (max-width:640px){ .grid { grid-template-columns:1fr; } }
 
     .card { border:1px solid var(--line); background:linear-gradient(180deg, #0e1522, #0a0f18); border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:10px; box-shadow:0 6px 16px rgba(0,0,0,0.25); }
-    .row { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+    .row { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
     .row .title { flex:1; min-width:0; }
     .title { font-size:16px; font-weight:700; line-height:1.35; }
-    .company { color:var(--muted); font-size:13px; }
     .meta { display:flex; gap:8px; flex-wrap:wrap; }
     .tag { padding:4px 8px; border-radius:8px; border:1px solid var(--line); color:var(--muted); font-size:12px; }
+    .tag.plus { border-style:dashed; }
     .deadline { font-weight:600; color:var(--accent); }
 
+    /* 지원/하기 두 줄 고정 버튼 */
     .btn { flex-shrink:0; display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1.15; word-break:keep-all; white-space:normal; min-width:64px; padding:10px 12px; border-radius:10px; background:var(--accent); color:#0b0f14; font-weight:700; text-decoration:none; border:0; }
     .btn .line { display:block; }
 
+    /* 회사/제목 두 줄 헤더 */
     .card-header { display:flex; flex-direction:column; gap:4px; }
     .card-header .company { font-size:14px; font-weight:600; color:var(--accent); }
     .card-header .title { font-size:16px; font-weight:700; line-height:1.35; }
@@ -58,6 +63,7 @@
           <option value="deadlineDesc">마감 늦은순</option>
           <option value="createdDesc">최신 추가순</option>
           <option value="createdAsc">오래된 추가순</option>
+          <option value="closed">마감된 공고</option><!-- 🆕 -->
         </select>
       </div>
       <div class="chips" id="activeChips"></div>
@@ -102,6 +108,7 @@
       }
     }
 
+    // 쉼표만 기준으로 직무 분리
     function splitRoles(s){
       return String(s||"").split(/[,，、]+/).map(v=>v.trim()).filter(Boolean);
     }
@@ -113,44 +120,69 @@
         const d = new Date(s);
         return isNaN(d.getTime()) ? null : d;
       };
-      const cat = trim(r.Category || r.직무 || "");
+      const cat = trim(r.Category || r.category || r.분류 || r.직무 || "");
+      const deadline = parseDate(r.Deadline || r.deadline || r.마감일);
       return {
-        Title: trim(r.Title || r.제목),
-        Company: trim(r.Company || r.회사),
+        Title: trim(r.Title || r.title || r.제목),
+        Company: trim(r.Company || r.company || r.회사),
         Roles: splitRoles(cat),
         CategoryRaw: cat,
-        Deadline: parseDate(r.Deadline || r.마감일),
-        Link: trim(r.Link || r.링크),
-        CreatedAt: parseDate(r.CreatedAt || r.작성일),
-        Notes: trim(r.Notes || r.메모),
+        Deadline: deadline,
+        Link: trim(r.Link || r.link || r.URL || r.링크),
+        CreatedAt: parseDate(r.CreatedAt || r.createdAt || r.created || r.작성일),
+        Notes: trim(r.Notes || r.notes || r.비고 || r.메모),
+        isClosed: isClosed(deadline), // 🆕 마감 여부
       };
+    }
+
+    function isClosed(d){
+      if(!(d instanceof Date)) return false; // 마감일 없으면 오픈 취급
+      // D-0(오늘)은 마감 아님. 어제 이전이면 마감.
+      const today = new Date(); today.setHours(0,0,0,0);
+      const dd = new Date(d); dd.setHours(0,0,0,0);
+      return dd < today;
     }
 
     function pipeline(){
       const { q, company, role } = state.filters;
       const qx = q.toLowerCase();
-      let arr = state.raw.filter(it => {
+
+      // 정렬이 'closed'가 아니면 오픈 공고만
+      const base = state.sort === 'closed'
+        ? state.raw.filter(it => it.isClosed)
+        : state.raw.filter(it => !it.isClosed);
+
+      let arr = base.filter(it => {
         const hitQ = !qx || [it.Title, it.Company, it.CategoryRaw, it.Notes].some(v => (v||'').toLowerCase().includes(qx));
         const hitC = !company || it.Company === company;
         const hitR = !role || (it.Roles||[]).includes(role);
         return hitQ && hitC && hitR;
       });
 
+      // 정렬
       const byDeadline = (a,b) => (a.Deadline? a.Deadline.getTime(): Infinity) - (b.Deadline? b.Deadline.getTime(): Infinity);
       const byDeadlineDesc = (a,b) => (b.Deadline? b.Deadline.getTime(): -Infinity) - (a.Deadline? a.Deadline.getTime(): -Infinity);
       const byCreated = (a,b) => (a.CreatedAt? a.CreatedAt.getTime(): 0) - (b.CreatedAt? b.CreatedAt.getTime(): 0);
       const byCreatedDesc = (a,b) => (b.CreatedAt? b.CreatedAt.getTime(): 0) - (a.CreatedAt? a.CreatedAt.getTime(): 0);
+
       switch(state.sort){
         case 'deadlineAsc': arr.sort(byDeadline); break;
         case 'deadlineDesc': arr.sort(byDeadlineDesc); break;
         case 'createdAsc': arr.sort(byCreated); break;
         case 'createdDesc': arr.sort(byCreatedDesc); break;
+        case 'closed': default:
+          // closed일 때는 마감일 내림차순(가장 최근에 마감된 게 위)로 보는 것도 괜찮음
+          arr.sort(byDeadlineDesc);
       }
 
       state.view = arr;
       render();
-      populateFilters();
+      populateFilters();  // 📝 오픈 공고만 기준으로 옵션 생성
       renderChips();
+    }
+
+    function getMaxTags(){
+      return window.innerWidth <= 640 ? 4 : 6; // 모바일은 4개, 그 외 6개로 제한 → 2줄 내 수렴
     }
 
     function render(){
@@ -158,13 +190,23 @@
       if(state.view.length === 0){ els.empty.style.display = 'block'; return; }
       els.empty.style.display = 'none';
 
+      const maxTags = getMaxTags();
+
       for(const it of state.view){
         const card = document.createElement('div');
         card.className = 'card';
+
         const dStr = it.Deadline ? formatDate(it.Deadline) : '마감 미정';
         const soon = daysUntil(it.Deadline);
-        const deadlineHTML = `<span class="deadline">${dStr}${Number.isFinite(soon) ? ` · D${soon>=0?'-':''}${Math.abs(soon)}` : ''}</span>`;
-        const roleTags = (it.Roles||[]).map(r=>`<span class="tag">🏷️ ${escapeHTML(r)}</span>`).join('');
+        const dDay = Number.isFinite(soon) ? ` · D${soon>=0?'-':''}${Math.abs(soon)}` : '';
+        const deadlineLine = `<div class="deadline">${dStr}${dDay}</div>`;
+
+        // 태그 줄: 최대 N개, 남으면 +n 표시
+        const roles = it.Roles || [];
+        let shown = roles.slice(0, Math.max(0, maxTags));
+        let rest = Math.max(0, roles.length - shown.length);
+        const roleTags = shown.map(r=>`<span class="tag">🏷️ ${escapeHTML(r)}</span>`).join('');
+        const plusTag = rest > 0 ? `<span class="tag plus">+${rest}</span>` : '';
 
         card.innerHTML = `
           <div class="row">
@@ -174,21 +216,26 @@
             </div>
             <a class="btn" href="${it.Link}" target="_blank" rel="noopener"><span class="line">지원</span><span class="line">하기</span></a>
           </div>
-          <div class="row" style="gap:8px; align-items:flex-start;">
-            <div class="meta">
-              ${roleTags}
-              ${deadlineHTML}
-            </div>
+
+          <!-- 태그 줄 -->
+          <div class="meta">
+            ${roleTags}${plusTag}
           </div>
-          ${it.Notes? `<div style="color:#aab7cf; font-size:13px; line-height:1.5">${escapeHTML(it.Notes)}</div>`:''}
+
+          <!-- 마감 줄 (항상 다음 줄로) -->
+          ${deadlineLine}
+
+          ${it.Notes? `<div style="color:#aab7cf; font-size:13px; line-height:1.5; margin-top:4px;">${escapeHTML(it.Notes)}</div>`:''}
         `;
         els.grid.appendChild(card);
       }
     }
 
     function populateFilters(){
-      const companies = [...new Set(state.raw.map(x=>x.Company).filter(Boolean))].sort();
-      const roles = [...new Set(state.raw.flatMap(x=>x.Roles||[]))].sort();
+      // 오픈 공고만 기준으로 회사/직무 목록 생성 (마감된 공고 제외)
+      const openOnly = state.raw.filter(x => !x.isClosed);
+      const companies = [...new Set(openOnly.map(x=>x.Company).filter(Boolean))].sort();
+      const roles = [...new Set(openOnly.flatMap(x=>x.Roles||[]))].sort();
 
       const setOptions = (sel, values, placeholder) => {
         const cur = sel.value;
@@ -218,32 +265,31 @@
       return el;
     }
 
+    // 유틸
     function formatDate(d){ if(!(d instanceof Date)) return ''; const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,'0'); const day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; }
-    function daysUntil(d){ if(!(d instanceof Date)) return Infinity; const ms=d.setHours(0,0,0,0)-new Date().setHours(0,0,0,0); return Math.round(ms/86400000); }
+    function daysUntil(d){ if(!(d instanceof Date)) return Infinity; const ms=new Date(d).setHours(0,0,0,0) - new Date().setHours(0,0,0,0); return Math.round(ms/86400000); }
     function escapeHTML(s){ return String(s||'').replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
 
+    // 샘플 (시트 장애시 표시)
     function sampleData(){
       const toD = s => new Date(s);
       return [
-        { Title:'2025년 신입사원 집중채용', Company:'현대로템', Roles:['디펜스솔루션','레일솔루션','에코플랜트','생산기술','품질','재경','경영지원'], Deadline: toD('2025-09-07'), Link:'https://example.com/apply0', CreatedAt: toD('2025-09-01'), Notes:'TOEIC Speaking 또는 OPIc 성적 제출 필수' },
-        { Title:'2025년 하반기 신입사원 수시채용', Company:'LG에너지솔루션', Roles:['R&D','생산기술','Staff'], Deadline: toD('2025-09-10'), Link:'https://example.com/apply1', CreatedAt: toD('2025-09-02'), Notes:'OPIc IH 이상 or TOEIC 160점 이상' }
+        { Title:'샘플 채용', Company:'Sample Corp', Roles:['R&D','생산기술','품질','재경','경영지원','안전'], Deadline: toD('2025-10-10'), Link:'#', CreatedAt: toD('2025-09-01'), Notes:'이건 샘플입니다.', isClosed:false }
       ];
     }
 
+    // 이벤트
     els.search.addEventListener('input', e=>{ state.filters.q = e.target.value; pipeline(); });
     els.filterCompany.addEventListener('change', e=>{ state.filters.company = e.target.value; pipeline(); });
     els.filterRole.addEventListener('change', e=>{ state.filters.role = e.target.value; pipeline(); });
     els.sort.addEventListener('change', e=>{ state.sort = e.target.value; pipeline(); });
 
+    // 시작
     fetchCSV();
     setInterval(fetchCSV, 10 * 60 * 1000);
+
+    // 반응형에서 태그 제한 재렌더 (창 크기 바뀔 때)
+    window.addEventListener('resize', () => { render(); });
   </script>
 </body>
 </html>
-
-
-
-
-
-
-
