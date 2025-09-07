@@ -189,6 +189,7 @@
         case 'favs': {
           const favIds = getFavs();
           arr = arr.filter(it => favIds.includes(`${it.Company}::${it.Title}`));
+          arr.sort(byDeadlineDesc); // ← 즐겨찾기 뷰에서도 마감 최신순
           break;
         }
         default:
@@ -357,6 +358,7 @@
   </script>
 </body>
 </html>
+
 
 
 
