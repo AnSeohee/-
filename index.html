@@ -166,7 +166,7 @@
 
     const state = {
       raw: [], view: [],
-      filters: { q: "", company: "", role: [] }, // role을 배열로 변경
+      filters: { q: "", company: "", role: [] },
       sort: "deadlineAsc",
       favsOnly: false,
       showHiddenOnly: false,
@@ -336,7 +336,7 @@
       }
       els.empty.style.display = 'none';
       
-      const TAG_LIMIT = 6; // 2줄을 넘지 않게 표시할 태그의 대략적인 개수
+      const TAG_LIMIT = 6;
 
       for(const it of state.view){
         const card = document.createElement('div');
@@ -421,7 +421,7 @@
           }
         });
       });
-
+      
       els.grid.querySelectorAll('.plus-toggle').forEach(btn => {
         btn.addEventListener('click', () => {
           const metaContainer = btn.parentElement;
