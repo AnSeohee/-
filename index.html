@@ -13,13 +13,10 @@
     header { position:sticky; top:0; z-index:10; backdrop-filter:saturate(1.2) blur(8px); background:rgba(11,15,20,0.7); border-bottom:1px solid var(--line); }
     .wrap { max-width:1100px; margin:0 auto; padding:20px; }
     h1 { margin:0; font-size:26px; letter-spacing:0.2px; cursor:pointer; }
-
     .header-row { display:flex; align-items:center; justify-content:space-between; gap:12px; }
     .header-toggles { display:flex; align-items:center; gap:8px; }
-
     .controls { display:grid; grid-template-columns:1fr 180px 180px 160px; gap:10px; margin-top:8px; }
     @media (max-width:1000px){ .controls{ grid-template-columns:1fr 1fr; } }
-
     .icon-toggle{ display:flex; align-items:center; justify-content:center; width:42px; height:42px; border:1px solid var(--line); border-radius:10px; background:var(--card); color:#9aa7bd; font-size:18px; cursor:pointer; user-select:none; }
     .icon-toggle.active{ border-color:#fbbf24; }
     .star-ic .star{ fill:transparent; stroke:#9aa7bd; stroke-width:1.5; }
@@ -27,78 +24,50 @@
     .x-ic .x{ fill:transparent; stroke:#9aa7bd; stroke-width:2; stroke-linecap:round; }
     .icon-toggle.danger.active{ border-color:#ef4444; }
     .icon-toggle.danger.active .x{ stroke:#ef4444; }
-
     input, select { width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--line); background:var(--card); color:var(--text); }
     input::placeholder { color:#6b7280; }
     .chips { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
     .chip { font-size:12px; padding:6px 10px; border-radius:999px; background:#0f172a; border:1px solid var(--line); color:var(--muted); cursor:default; }
-
     .grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:16px; margin-top:18px; }
     @media (max-width:1000px){ .grid { grid-template-columns:repeat(2, 1fr); } }
     @media (max-width:640px){ .grid { grid-template-columns:1fr; } }
-
-    .card {
-      border:1px solid var(--line); background:linear-gradient(180deg, #0e1522, #0a0f18); border-radius:16px; padding:16px;
-      display:flex; flex-direction:column; gap:10px; box-shadow:0 6px 16px rgba(0,0,0,0.25);
-      position:relative;
-      user-select: none;
-    }
+    .card { border:1px solid var(--line); background:linear-gradient(180deg, #0e1522, #0a0f18); border-radius:16px; padding:16px;
+      display:flex; flex-direction:column; gap:10px; box-shadow:0 6px 16px rgba(0,0,0,0.25); position:relative; user-select: none; }
     .row { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
     .card-header { flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; }
     .card-header .company { font-size:14px; font-weight:600; color:var(--accent); }
     .card-header .title { font-size:16px; font-weight:700; line-height:1.35; }
-
     .meta { display: flex; gap: 8px; flex-wrap: wrap; }
     .meta .hidden-tags { display: none; }
     .meta.expanded .hidden-tags { display: contents; }
     .tag { padding:4px 8px; border-radius:8px; border:1px solid var(--line); color:#aab7cf; font-size:12px; white-space: nowrap; }
     .tag.clickable-tag { cursor: pointer; transition: background-color 0.2s; }
     .tag.clickable-tag:hover { background-color: rgba(255,255,255,0.07); border-color: var(--accent); }
-    .tag.plus-toggle {
-      border-style: dashed;
-      cursor: pointer;
-      background-color: transparent;
-      font-family: inherit;
-    }
+    .tag.plus-toggle { border-style: dashed; cursor: pointer; background-color: transparent; font-family: inherit; }
     .deadline { font-weight:600; color:var(--accent); }
     .deadline.soon { color:#fca5a5; font-weight:800; }
     .deadline.today { color:#ef4444; font-weight:900; }
-
     .btn { flex-shrink:0; display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1.15; word-break:keep-all; white-space:normal; min-width:64px; padding:10px 12px; border-radius:10px; background:var(--accent); color:#0b0f14; font-weight:700; text-decoration:none; border:0; }
     .btn .line { display:block; }
-
     .empty { text-align:center; color:#9aa7bd; padding:40px 0; border:1px dashed var(--line); border-radius:12px; }
     footer { color:#7c8aa3; font-size:12px; text-align:center; padding:24px 0 40px; }
     .notice-danger { color:#fca5a5; font-size:12px; margin-top:10px; }
-    
     .fav-btn { cursor:pointer; font-size:18px; color:#9aa7bd; user-select:none; }
     .fav-btn.active { color:#fbbf24; }
-
-    .toast {
-      position: fixed; bottom: -100px; left: 50%; transform: translateX(-50%);
+    .toast { position: fixed; bottom: -100px; left: 50%; transform: translateX(-50%);
       background-color: #2a3341; color: var(--text); padding: 12px 20px; border-radius: 8px;
       border: 1px solid var(--line); box-shadow: 0 4px 12px rgba(0,0,0,0.3);
       display: flex; align-items: center; gap: 16px;
-      transition: bottom 0.4s ease-in-out; z-index: 100; user-select: none;
-    }
+      transition: bottom 0.4s ease-in-out; z-index: 100; user-select: none; }
     .toast.show { bottom: 20px; }
     #undoButton { background: transparent; border: none; color: var(--accent); font-weight: bold; cursor: pointer; padding: 0; font-size: 14px; }
-    
-    .loader-overlay {
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    .loader-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       background: rgba(11, 15, 20, 0.7); backdrop-filter: blur(4px);
       display: flex; justify-content: center; align-items: center;
-      z-index: 200;
-    }
-    .spinner {
-      width: 50px; height: 50px;
-      border: 5px solid var(--line);
-      border-top: 5px solid var(--accent);
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-    }
+      z-index: 200; }
+    .spinner { width: 50px; height: 50px; border: 5px solid var(--line); border-top: 5px solid var(--accent); border-radius: 50%;
+      animation: spin 1s linear infinite; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
     .settings-io { margin-top: 24px; border-top: 1px solid var(--line); padding-top: 24px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
     .settings-io button { background: var(--card); color: var(--text); border: 1px solid var(--line); padding: 8px 16px; border-radius: 8px; cursor: pointer; transition: background-color 0.2s; }
     .settings-io button:hover { background-color: var(--line); }
@@ -117,10 +86,10 @@
         <h1 id="title">공고 보드</h1>
         <div class="header-toggles">
           <button class="icon-toggle danger toggle-hidden" type="button" aria-pressed="false" title="숨김만 보기">
-            <svg class="x-ic" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path class="x" d="M6 6 L18 18 M6 18 L18 6"/></svg>
+            <svg class="x-ic" viewBox="0 0 24 24" width="20" height="20"><path class="x" d="M6 6 L18 18 M6 18 L18 6"/></svg>
           </button>
           <button class="icon-toggle toggle-favs" type="button" aria-pressed="false" title="즐겨찾기만 보기">
-            <svg class="star-ic" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path class="star" d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+            <svg class="star-ic" viewBox="0 0 24 24" width="22" height="22"><path class="star" d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
           </button>
         </div>
       </div>
@@ -164,35 +133,20 @@
     <span id="toastMessage"></span>
     <button id="undoButton">실행 취소</button>
   </div>
-
+  
   <script>
     const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRlDY1wcqL865tOwgSiUH1ooIAT7UQYIAAxSEb07KLETAE0IPYJeDZP_dWIB_gcnirFtepi_D1Aey6E/pub?output=csv";
-
-    const state = {
-      raw: [], view: [],
-      filters: { q: "", company: "", role: [] },
-      sort: "deadlineAsc",
-      favsOnly: false,
-      showHiddenOnly: false,
-    };
-
+    const state = { raw: [], view: [], filters: { q: "", company: "", role: [] }, sort: "deadlineAsc", favsOnly: false, showHiddenOnly: false };
     const els = {
-      grid: document.getElementById('grid'),
-      empty: document.getElementById('empty'),
-      search: document.getElementById('search'),
-      filterCompany: document.getElementById('filterCompany'),
-      filterRole: document.getElementById('filterRole'),
-      sort: document.getElementById('sort'),
-      chips: document.getElementById('activeChips'),
-      title: document.getElementById('title'),
-      loader: document.getElementById('loader'),
+      grid: document.getElementById('grid'), empty: document.getElementById('empty'),
+      search: document.getElementById('search'), filterCompany: document.getElementById('filterCompany'),
+      filterRole: document.getElementById('filterRole'), sort: document.getElementById('sort'),
+      chips: document.getElementById('activeChips'), title: document.getElementById('title'),
+      loader: document.getElementById('loader'), ioArea: document.getElementById('io-area')
     };
-
     const favToggles = document.querySelectorAll('.toggle-favs');
     const hiddenToggles = document.querySelectorAll('.toggle-hidden');
-
-    let lastHiddenId = null;
-    let toastTimeout = null;
+    let lastHiddenId = null, toastTimeout = null;
     const toastElement = document.getElementById('toast');
 
     function showToast(message, itemId = null) {
@@ -203,11 +157,63 @@
       toastMessage.textContent = message;
       undoButton.style.display = itemId ? 'block' : 'none';
       toastElement.classList.add('show');
-      toastTimeout = setTimeout(() => {
-        toastElement.classList.remove('show');
-        lastHiddenId = null;
-      }, 5000);
+      toastTimeout = setTimeout(() => { toastElement.classList.remove('show'); lastHiddenId = null; }, 5000);
     }
+
+    // --- 설정 내보내기/가져오기 ---
+    function serializeSettings() {
+      return JSON.stringify({
+        version: 1,
+        filters: state.filters,
+        sort: state.sort,
+        favs: getFavs(),
+        hidden: getHidden(),
+        ts: Date.now(),
+      }, null, 2);
+    }
+    function applySettings(payload) {
+      const cfg = JSON.parse(payload);
+      if (cfg.filters) state.filters = cfg.filters;
+      if (cfg.sort) state.sort = cfg.sort;
+      if (Array.isArray(cfg.favs)) localStorage.setItem('favs', JSON.stringify(cfg.favs));
+      if (Array.isArray(cfg.hidden)) localStorage.setItem('hidden', JSON.stringify(cfg.hidden));
+      els.search.value = state.filters.q || '';
+      els.filterCompany.value = state.filters.company || '';
+      els.sort.value = state.sort || 'deadlineAsc';
+      pipeline();
+    }
+    async function copyToClipboard(text) {
+      try {
+        await navigator.clipboard.writeText(text);
+        showToast('설정을 클립보드에 복사했어요.');
+      } catch (e) {
+        els.ioArea.style.display = 'block';
+        els.ioArea.removeAttribute('readonly');
+        els.ioArea.value = text;
+        els.ioArea.focus();
+        els.ioArea.select();
+        document.execCommand('copy');
+        showToast('설정을 클립보드에 복사했어요.');
+        els.ioArea.setAttribute('readonly', 'readonly');
+      }
+    }
+    document.getElementById('export-btn').addEventListener('click', async () => {
+      const text = serializeSettings();
+      await copyToClipboard(text);
+      els.ioArea.style.display = 'block';
+      els.ioArea.removeAttribute('readonly');
+      els.ioArea.value = text;
+    });
+    document.getElementById('import-btn').addEventListener('click', () => {
+      els.ioArea.style.display = 'block';
+      els.ioArea.removeAttribute('readonly');
+      els.ioArea.placeholder = '여기에 내보낸 JSON을 붙여넣으세요.';
+      els.ioArea.focus();
+      const raw = els.ioArea.value && els.ioArea.value.trim();
+      if (!raw) { showToast('붙여넣을 설정(JSON)을 입력해주세요.'); return; }
+      try { applySettings(raw); showToast('설정을 적용했어요.'); }
+      catch (e) { console.error(e); showToast('설정 형식이 올바르지 않습니다.'); }
+    });
 
     let isActionLocked = false;
     const actOncePer = (fn) => {
@@ -549,3 +555,4 @@
   </script>
 </body>
 </html>
+
