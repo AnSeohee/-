@@ -429,7 +429,13 @@
               setTimeout(actOncePer(() => {
                 toggleHidden(id);
                 pipeline();
-                showToast(`'${it.Title}' 공고를 숨겼습니다.`, id);
+              
+                // 현재 '숨김 보기' 모드인지 확인하여 메시지를 다르게 설정
+                const message = state.showHiddenOnly
+                  ? `'${it.Company}' 공고를 복원했습니다.`
+                  : `'${it.Company}' 공고를 숨겼습니다.`;
+              
+                showToast(message, id);
               }), 200);
               e.preventDefault();
             } else {
@@ -445,7 +451,13 @@
           e.preventDefault();
           toggleHidden(id);
           pipeline();
-          showToast(`'${it.Title}' 공고를 숨겼습니다.`, id);
+        
+          // 현재 '숨김 보기' 모드인지 확인하여 메시지를 다르게 설정
+          const message = state.showHiddenOnly
+            ? `'${it.Company}' 공고를 복원했습니다.`
+            : `'${it.Company}' 공고를 숨겼습니다.`;
+        
+          showToast(message, id);
         }), {passive:false});
 
         els.grid.appendChild(card);
@@ -551,3 +563,4 @@
   </script>
 </body>
 </html>
+
