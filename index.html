@@ -48,16 +48,9 @@
     .card-header .company { font-size:14px; font-weight:600; color:var(--accent); }
     .card-header .title { font-size:16px; font-weight:700; line-height:1.35; }
 
-    .meta {
-      display: flex; gap: 8px; flex-wrap: wrap;
-      max-height: 58px;
-      overflow: hidden;
-      transition: max-height 0.3s ease-in-out;
-    }
-    .meta.expanded {
-      max-height: 500px;
-    }
-    .tag { padding:4px 8px; border-radius:8px; border:1px solid var(--line); color:#aab7cf; font-size:12px; }
+    .meta { display: flex; gap: 8px; flex-wrap: wrap; }
+    .meta .hidden-tags { display: none; }
+    .tag { padding:4px 8px; border-radius:8px; border:1px solid var(--line); color:#aab7cf; font-size:12px; white-space: nowrap; }
     .tag.clickable-tag { cursor: pointer; transition: background-color 0.2s; }
     .tag.clickable-tag:hover { background-color: rgba(255,255,255,0.07); border-color: var(--accent); }
     .tag.plus-toggle {
@@ -336,7 +329,6 @@
       }
       els.empty.style.display = 'none';
 
-      const TAG_LIMIT = 6;
       const favs = getFavs();
 
       for(const it of state.view){
@@ -356,13 +348,33 @@
         else if (dd >= 0 && dd <= 3) deadlineClass = ' soon';
         const deadlineLine = `<div class="deadline${deadlineClass}">${dStr}${dDay}</div>`;
 
+        // --- 태그 로직 시작 ---
         const roles = it.Roles || [];
-        const allRoleTagsHTML = roles.map(r => `<span class="tag clickable-tag" data-role="${escapeHTML(r)}">🏷️ ${escapeHTML(r)}</span>`).join('');
-        const hasMoreTags = roles.length > TAG_LIMIT;
-
+        const CHAR_LIMIT = 80; // 2줄에 들어갈 대략적인 글자 수 (화면 폭에 따라 조절 필요)
+        let charCount = 0;
+        let shownRoles = [];
+        
+        if (roles.length > 0) {
+          for(const role of roles) {
+            const newCount = charCount + role.length + 2; // 글자 수와 여백/아이콘 등 고려
+            if (shownRoles.length > 0 && newCount > CHAR_LIMIT) {
+              break;
+            }
+            shownRoles.push(role);
+            charCount = newCount;
+          }
+        }
+        
+        const hiddenRoles = roles.slice(shownRoles.length);
+        const hasMoreTags = hiddenRoles.length > 0;
+        
+        const shownTagsHTML = shownRoles.map(r => `<span class="tag clickable-tag" data-role="${escapeHTML(r)}">🏷️ ${escapeHTML(r)}</span>`).join('');
+        const hiddenTagsHTML = hiddenRoles.map(r => `<span class="tag clickable-tag" data-role="${escapeHTML(r)}">🏷️ ${escapeHTML(r)}</span>`).join('');
+        
         const plusToggleHTML = hasMoreTags
-            ? `<button class="tag plus-toggle" data-more-text="+${roles.length - TAG_LIMIT}" data-collapse-text="접기">+${roles.length - TAG_LIMIT}</button>`
+            ? `<button class="tag plus-toggle" data-more-text="+${hiddenRoles.length}" data-collapse-text="접기">+${hiddenRoles.length}</button>`
             : '';
+        // --- 태그 로직 끝 ---
 
         const id = `${it.Company}::${it.Title}`;
         const isFav = favs.includes(id);
@@ -378,7 +390,11 @@
             </div>
             <a class="btn" href="${it.Link}" target="_blank" rel="noopener"><span class="line">지원</span><span class="line">하기</span></a>
           </div>
-          <div class="meta">${allRoleTagsHTML}${plusToggleHTML}</div>
+          <div class="meta">
+            ${shownTagsHTML}
+            <span class="hidden-tags">${hiddenTagsHTML}</span>
+            ${plusToggleHTML}
+          </div>
           ${deadlineLine}
           ${it.Notes? `<div style="color:#aab7cf; font-size:13px; line-height:1.5; margin-top:4px;">${escapeHTML(it.Notes)}</div>`:''}
         `;
@@ -425,15 +441,15 @@
       
       els.grid.querySelectorAll('.plus-toggle').forEach(btn => {
         btn.addEventListener('click', () => {
-          const metaContainer = btn.parentElement;
-          const isExpanded = metaContainer.classList.contains('expanded');
+          const hiddenContainer = btn.previousElementSibling;
+          const isHidden = hiddenContainer.style.display !== 'contents';
           
-          metaContainer.classList.toggle('expanded');
-          
-          if (isExpanded) {
-            btn.textContent = btn.dataset.moreText;
-          } else {
+          if (isHidden) {
+            hiddenContainer.style.display = 'contents'; // 자식 요소들을 부모에 직접 붙인 것처럼 표시
             btn.textContent = btn.dataset.collapseText;
+          } else {
+            hiddenContainer.style.display = 'none';
+            btn.textContent = btn.dataset.moreText;
           }
         });
       });
