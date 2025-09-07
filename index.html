@@ -50,12 +50,12 @@
 
     .meta {
       display: flex; gap: 8px; flex-wrap: wrap;
-      max-height: 58px; /* 2줄 높이에 해당하는 값 (폰트, padding에 따라 조절) */
+      max-height: 58px;
       overflow: hidden;
       transition: max-height 0.3s ease-in-out;
     }
     .meta.expanded {
-      max-height: 500px; /* 펼쳤을 때 충분한 높이 */
+      max-height: 500px;
     }
     .tag { padding:4px 8px; border-radius:8px; border:1px solid var(--line); color:#aab7cf; font-size:12px; }
     .tag.clickable-tag { cursor: pointer; transition: background-color 0.2s; }
@@ -63,8 +63,8 @@
     .tag.plus-toggle {
       border-style: dashed;
       cursor: pointer;
-      background-color: transparent; /* button 기본 스타일 제거 */
-      font-family: inherit; /* button 기본 스타일 제거 */
+      background-color: transparent;
+      font-family: inherit;
     }
     .deadline { font-weight:600; color:var(--accent); }
     .deadline.soon { color:#fca5a5; font-weight:800; }
@@ -335,8 +335,9 @@
         return;
       }
       els.empty.style.display = 'none';
-      
+
       const TAG_LIMIT = 6;
+      const favs = getFavs();
 
       for(const it of state.view){
         const card = document.createElement('div');
