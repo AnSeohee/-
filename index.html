@@ -78,9 +78,39 @@
     footer { color:#7c8aa3; font-size:12px; text-align:center; padding:24px 0 40px; }
     .notice-danger { color:#fca5a5; font-size:12px; margin-top:10px; }
     
-    /* 카드 내 즐겨찾기 버튼 */
     .fav-btn { cursor:pointer; font-size:18px; color:#9aa7bd; user-select:none; }
     .fav-btn.active { color:#fbbf24; }
+
+    .toast {
+      position: fixed;
+      bottom: -100px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #2a3341;
+      color: var(--text);
+      padding: 12px 20px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      transition: bottom 0.4s ease-in-out;
+      z-index: 100;
+      user-select: none;
+    }
+    .toast.show {
+      bottom: 20px;
+    }
+    #undoButton {
+      background: transparent;
+      border: none;
+      color: var(--accent);
+      font-weight: bold;
+      cursor: pointer;
+      padding: 0;
+      font-size: 14px;
+    }
   </style>
   <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
 </head>
@@ -122,7 +152,7 @@
 
   <footer>
     <div class="wrap">
-      Notice Board · Made by 힘들어요
+      Notice Board · Made by 자동 새로고침 10분 간격
       <div style="margin-top:8px; font-size:11px; color:#9aa7bd;">
         본 사이트의 공고 정보는 참고용으로만 제공되며,<br>
         정확한 내용과 일정은 반드시 각 회사의 공식 채용 공고를 확인하시기 바랍니다.<br>
@@ -131,8 +161,13 @@
     </div>
   </footer>
 
+  <div id="toast" class="toast">
+    <span id="toastMessage"></span>
+    <button id="undoButton">실행 취소</button>
+  </div>
+
   <script>
-    const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRlDY1wcqL865tOwgSiUH1ooIAT7UQYIAAxSEb07KLETAE0IPYJeDZP_dWIB_gcnirFtepi_D1Aey6E/pub?output=csv";
+    const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRlDY1wcqL865tOwgSiUH1ooIAT7UQYIAAxSEb07KLETAE_IPYJeDZP_dWIB_gcnirFtepi_D1Aey6E/pub?output=csv";
 
     const state = {
       raw: [], view: [],
@@ -155,6 +190,24 @@
 
     const favToggles = document.querySelectorAll('.toggle-favs');
     const hiddenToggles = document.querySelectorAll('.toggle-hidden');
+
+    let lastHiddenId = null;
+    let toastTimeout = null;
+    const toastElement = document.getElementById('toast');
+
+    function showToast(message, itemId) {
+      const toastMessage = document.getElementById('toastMessage');
+      if (toastTimeout) {
+        clearTimeout(toastTimeout);
+      }
+      lastHiddenId = itemId;
+      toastMessage.textContent = message;
+      toastElement.classList.add('show');
+      toastTimeout = setTimeout(() => {
+        toastElement.classList.remove('show');
+        lastHiddenId = null;
+      }, 5000);
+    }
 
     let isActionLocked = false;
     const actOncePer = (fn) => {
@@ -255,7 +308,7 @@
       }
 
       const byDeadline     = (a,b) => (a.Deadline? a.Deadline.getTime():  Infinity) - (b.Deadline? b.Deadline.getTime():  Infinity);
-      const byDeadlineDesc = (a,b) => (b.Deadline? b.Deadline.getTime(): -Infinity) - (a.Deadline? b.Deadline.getTime(): -Infinity);
+      const byDeadlineDesc = (a,b) => (b.Deadline? b.Deadline.getTime(): -Infinity) - (a.Deadline? a.Deadline.getTime(): -Infinity);
 
       switch(state.sort){
         case 'deadlineAsc':  arr.sort(byDeadline);      break;
@@ -341,17 +394,16 @@
           ${it.Notes? `<div style="color:#aab7cf; font-size:13px; line-height:1.5; margin-top:4px;">${escapeHTML(it.Notes)}</div>`:''}
         `;
 
-        // 스와이프 기능 추가
         let touchStartX = 0;
         let touchMoveX = 0;
         let isSwiping = false;
-        const SWIPE_THRESHOLD = 80; // 스와이프로 인정할 최소 거리
+        const SWIPE_THRESHOLD = 80;
 
         card.addEventListener('touchstart', (e) => {
-          if (e.touches.length === 1) { // 단일 터치만 처리
+          if (e.touches.length === 1) {
             touchStartX = e.touches[0].clientX;
             isSwiping = false;
-            card.style.transition = 'none'; // 스와이프 중에는 transition 끄기
+            card.style.transition = 'none';
           }
         }, {passive:true});
 
@@ -360,29 +412,27 @@
             touchMoveX = e.touches[0].clientX;
             const diffX = touchMoveX - touchStartX;
 
-            if (Math.abs(diffX) > 10) { // 스와이프 시작으로 간주 (약간의 움직임 허용)
+            if (Math.abs(diffX) > 10) {
               isSwiping = true;
               card.style.transform = `translateX(${diffX}px)`;
             }
           }
-        }, {passive:false}); // passive:false로 설정하여 e.preventDefault() 가능하게 함
+        }, {passive:false});
 
         card.addEventListener('touchend', (e) => {
-          card.style.transition = 'transform 0.2s ease-out, opacity 0.2s ease-out'; // transition 다시 켜기
-
+          card.style.transition = 'transform 0.2s ease-out, opacity 0.2s ease-out';
           if (isSwiping) {
             const diffX = touchMoveX - touchStartX;
             if (Math.abs(diffX) > SWIPE_THRESHOLD) {
-              // 충분히 스와이프 했으면 숨김 처리
-              card.style.transform = `translateX(${diffX > 0 ? '100vw' : '-100vw'})`; // 화면 밖으로 밀어내기
+              card.style.transform = `translateX(${diffX > 0 ? '100vw' : '-100vw'})`;
               card.style.opacity = '0';
               setTimeout(actOncePer(() => {
                 toggleHidden(id);
                 pipeline();
-              }), 200); // 애니메이션 후 목록 갱신
-              e.preventDefault(); // 링크 클릭 방지
+                showToast(`'${it.Title}' 공고를 숨겼습니다.`, id);
+              }), 200);
+              e.preventDefault();
             } else {
-              // 충분히 스와이프하지 않았으면 원래 위치로 복귀
               card.style.transform = 'translateX(0)';
             }
           }
@@ -395,6 +445,7 @@
           e.preventDefault();
           toggleHidden(id);
           pipeline();
+          showToast(`'${it.Title}' 공고를 숨겼습니다.`, id);
         }), {passive:false});
 
         els.grid.appendChild(card);
@@ -417,7 +468,7 @@
     function populateFilters(){
       const openOnly = state.raw.filter(x => !x.isClosed);
       const companies = [...new Set(openOnly.map(x=>x.Company).filter(Boolean))].sort();
-      const roles = [...new Set(openOnly.flatMap(x=>x.Roles||[]))].sort();
+      const roles = [...new Set(open-only.flatMap(x=>x.Roles||[]))].sort();
 
       const setOptions = (sel, values, placeholder) => {
         const cur = sel.value;
@@ -460,6 +511,16 @@
       ];
     }
 
+    document.getElementById('undoButton').addEventListener('click', () => {
+      if (lastHiddenId) {
+        toggleHidden(lastHiddenId);
+        pipeline();
+        toastElement.classList.remove('show');
+        clearTimeout(toastTimeout);
+        lastHiddenId = null;
+      }
+    });
+
     els.title.addEventListener('click', () => { location.reload(); });
     els.search.addEventListener('input', e=>{ state.filters.q = e.target.value; pipeline(); });
     document.getElementById('filterCompany').addEventListener('change', e=>{ state.filters.company = e.target.value; pipeline(); });
@@ -490,4 +551,3 @@
   </script>
 </body>
 </html>
-
