@@ -521,12 +521,19 @@
         pipeline();
         if (state.favsOnly) {
           showToast("즐겨찾기한 공고만 표시합니다.");
-        } else {
-          showToast("기본 공고 목록을 표시합니다.");
         }
       });
     });
-    hiddenToggles.forEach(btn=>{ btn.addEventListener('click', ()=>{ state.showHiddenOnly = !state.showHiddenOnly; pipeline(); if (state.showHiddenOnly) { showToast("숨긴 공고만 표시합니다."); } else { showToast("기본 공고 목록을 표시합니다."); } }); });
+
+    hiddenToggles.forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        state.showHiddenOnly = !state.showHiddenOnly;
+        pipeline();
+        if (state.showHiddenOnly) {
+          showToast("숨긴 공고만 표시합니다.");
+        }
+      });
+    });  
 
     fetchCSV();
     setInterval(fetchCSV, 10 * 60 * 1000);
@@ -536,3 +543,4 @@
   </script>
 </body>
 </html>
+
