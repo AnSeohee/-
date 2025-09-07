@@ -14,29 +14,16 @@
     .wrap { max-width:1100px; margin:0 auto; padding:20px; }
     h1 { margin:0; font-size:26px; letter-spacing:0.2px; cursor:pointer; }
 
-    /* 제목 줄: 제목(좌)과 토글 버튼(우)을 수평 배치 */
     .header-row { display:flex; align-items:center; justify-content:space-between; gap:12px; }
     .header-toggles { display:flex; align-items:center; gap:8px; }
 
-    /* 컨트롤 그리드: PC=검색/회사/직무/정렬(4칸) */
     .controls { display:grid; grid-template-columns:1fr 180px 180px 160px; gap:10px; margin-top:8px; }
     @media (max-width:1000px){ .controls{ grid-template-columns:1fr 1fr; } }
 
-    /* 아이콘 토글 공통 */
-    .icon-toggle{
-      display:flex; align-items:center; justify-content:center;
-      width:42px; height:42px;
-      border:1px solid var(--line); border-radius:10px;
-      background:var(--card); color:#9aa7bd; font-size:18px;
-      cursor:pointer; user-select:none;
-    }
+    .icon-toggle{ display:flex; align-items:center; justify-content:center; width:42px; height:42px; border:1px solid var(--line); border-radius:10px; background:var(--card); color:#9aa7bd; font-size:18px; cursor:pointer; user-select:none; }
     .icon-toggle.active{ border-color:#fbbf24; }
-
-    /* 별 SVG */
     .star-ic .star{ fill:transparent; stroke:#9aa7bd; stroke-width:1.5; }
     .icon-toggle.active .star{ fill:#fbbf24; stroke:#fbbf24; }
-
-    /* X SVG */
     .x-ic .x{ fill:transparent; stroke:#9aa7bd; stroke-width:2; stroke-linecap:round; }
     .icon-toggle.danger.active{ border-color:#ef4444; }
     .icon-toggle.danger.active .x{ stroke:#ef4444; }
@@ -53,11 +40,8 @@
     .card {
       border:1px solid var(--line); background:linear-gradient(180deg, #0e1522, #0a0f18); border-radius:16px; padding:16px;
       display:flex; flex-direction:column; gap:10px; box-shadow:0 6px 16px rgba(0,0,0,0.25);
-      position:relative;
-      transition:transform 0.2s ease-out, opacity 0.2s ease-out;
-      touch-action: pan-y;
-      -webkit-user-drag: none;
-      user-select: none;
+      position:relative; transition:transform 0.2s ease-out, opacity 0.2s ease-out;
+      touch-action: pan-y; -webkit-user-drag: none; user-select: none;
     }
     .row { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
     .card-header { flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; }
@@ -66,6 +50,8 @@
 
     .meta { display:flex; gap:8px; flex-wrap:wrap; }
     .tag { padding:4px 8px; border-radius:8px; border:1px solid var(--line); color:#aab7cf; font-size:12px; }
+    .tag.clickable-tag { cursor: pointer; transition: background-color 0.2s; }
+    .tag.clickable-tag:hover { background-color: rgba(255,255,255,0.07); border-color: var(--accent); }
     .tag.plus { border-style:dashed; }
     .deadline { font-weight:600; color:var(--accent); }
     .deadline.soon { color:#fca5a5; font-weight:800; }
@@ -82,39 +68,38 @@
     .fav-btn.active { color:#fbbf24; }
 
     .toast {
-      position: fixed;
-      bottom: -100px;
-      left: 50%;
-      transform: translateX(-50%);
-      background-color: #2a3341;
-      color: var(--text);
-      padding: 12px 20px;
-      border-radius: 8px;
-      border: 1px solid var(--line);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      transition: bottom 0.4s ease-in-out;
-      z-index: 100;
-      user-select: none;
+      position: fixed; bottom: -100px; left: 50%; transform: translateX(-50%);
+      background-color: #2a3341; color: var(--text); padding: 12px 20px; border-radius: 8px;
+      border: 1px solid var(--line); box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      display: flex; align-items: center; gap: 16px;
+      transition: bottom 0.4s ease-in-out; z-index: 100; user-select: none;
     }
-    .toast.show {
-      bottom: 20px;
+    .toast.show { bottom: 20px; }
+    #undoButton { background: transparent; border: none; color: var(--accent); font-weight: bold; cursor: pointer; padding: 0; font-size: 14px; }
+    
+    /* 로딩 스피너 */
+    .loader-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(11, 15, 20, 0.7); backdrop-filter: blur(4px);
+      display: flex; justify-content: center; align-items: center;
+      z-index: 200;
     }
-    #undoButton {
-      background: transparent;
-      border: none;
-      color: var(--accent);
-      font-weight: bold;
-      cursor: pointer;
-      padding: 0;
-      font-size: 14px;
+    .spinner {
+      width: 50px; height: 50px;
+      border: 5px solid var(--line);
+      border-top: 5px solid var(--accent);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
     }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
   </style>
   <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
 </head>
 <body>
+  <div id="loader" class="loader-overlay" style="display: none;">
+    <div class="spinner"></div>
+  </div>
+
   <header>
     <div class="wrap">
       <div class="header-row">
@@ -128,7 +113,6 @@
           </button>
         </div>
       </div>
-
       <div class="controls">
         <input id="search" type="search" placeholder="검색: 제목, 회사, 키워드..." />
         <select id="filterCompany"><option value="">회사: 전체</option></select>
@@ -139,7 +123,6 @@
           <option value="closed">마감된 공고</option>
         </select>
       </div>
-
       <div class="notice-danger">※ D-DAY는 23:59 기준이며, 실제 마감 시간과 다를 수 있습니다. 공고 본문에서 정확한 시간을 꼭 확인해주세요.</div>
       <div class="chips" id="activeChips"></div>
     </div>
@@ -171,7 +154,7 @@
 
     const state = {
       raw: [], view: [],
-      filters: { q: "", company: "", role: "" },
+      filters: { q: "", company: "", role: [] }, // role을 배열로 변경
       sort: "deadlineAsc",
       favsOnly: false,
       showHiddenOnly: false,
@@ -186,6 +169,7 @@
       sort: document.getElementById('sort'),
       chips: document.getElementById('activeChips'),
       title: document.getElementById('title'),
+      loader: document.getElementById('loader'),
     };
 
     const favToggles = document.querySelectorAll('.toggle-favs');
@@ -195,13 +179,13 @@
     let toastTimeout = null;
     const toastElement = document.getElementById('toast');
 
-    function showToast(message, itemId) {
+    function showToast(message, itemId = null) {
       const toastMessage = document.getElementById('toastMessage');
-      if (toastTimeout) {
-        clearTimeout(toastTimeout);
-      }
+      const undoButton = document.getElementById('undoButton');
+      if (toastTimeout) clearTimeout(toastTimeout);
       lastHiddenId = itemId;
       toastMessage.textContent = message;
+      undoButton.style.display = itemId ? 'block' : 'none';
       toastElement.classList.add('show');
       toastTimeout = setTimeout(() => {
         toastElement.classList.remove('show');
@@ -220,6 +204,7 @@
     };
 
     async function fetchCSV(){
+      els.loader.style.display = 'flex';
       try{
         const res = await fetch(SHEET_CSV_URL, { cache: 'no-store' });
         const csv = await res.text();
@@ -230,6 +215,8 @@
         console.error(e);
         state.raw = sampleData();
         pipeline();
+      } finally {
+        els.loader.style.display = 'none';
       }
     }
 
@@ -292,7 +279,8 @@
       let arr = base.filter(it => {
         const hitQ = !qx || [it.Title, it.Company, it.CategoryRaw, it.Notes].some(v => (v||'').toLowerCase().includes(qx));
         const hitC = !company || it.Company === company;
-        const hitR = !role || (it.Roles||[]).includes(role);
+        // 직무 필터 로직: 선택된 직무가 하나라도 포함되면 통과
+        const hitR = role.length === 0 || role.some(r => (it.Roles || []).includes(r));
         return hitQ && hitC && hitR;
       });
 
@@ -307,14 +295,14 @@
         arr = arr.filter(it => favIds.includes(`${it.Company}::${it.Title}`));
       }
 
-      const byDeadline     = (a,b) => (a.Deadline? a.Deadline.getTime():  Infinity) - (b.Deadline? b.Deadline.getTime():  Infinity);
-      const byDeadlineDesc = (a,b) => (b.Deadline? b.Deadline.getTime(): -Infinity) - (a.Deadline? a.Deadline.getTime(): -Infinity);
+      const byDeadline = (a,b) => (a.Deadline?.getTime() || Infinity) - (b.Deadline?.getTime() || Infinity);
+      const byDeadlineDesc = (a,b) => (b.Deadline?.getTime() || -Infinity) - (a.Deadline?.getTime() || -Infinity);
 
       switch(state.sort){
-        case 'deadlineAsc':  arr.sort(byDeadline);      break;
-        case 'deadlineDesc': arr.sort(byDeadlineDesc);  break;
-        case 'closed':       arr.sort(byDeadlineDesc);  break;
-        default:             arr.sort(byDeadlineDesc);  break;
+        case 'deadlineAsc':  arr.sort(byDeadline); break;
+        case 'deadlineDesc': arr.sort(byDeadlineDesc); break;
+        case 'closed': arr.sort(byDeadlineDesc); break;
+        default: arr.sort(byDeadlineDesc); break;
       }
 
       state.view = arr;
@@ -322,15 +310,8 @@
       populateFilters();
       renderChips();
 
-      favToggles.forEach(btn=>{
-        btn.classList.toggle('active', state.favsOnly);
-        btn.setAttribute('aria-pressed', String(state.favsOnly));
-      });
-      hiddenToggles.forEach(btn=>{
-        btn.classList.toggle('active', state.showHiddenOnly);
-        btn.setAttribute('aria-pressed', String(state.showHiddenOnly));
-        btn.classList.toggle('danger', true);
-      });
+      favToggles.forEach(btn=>{ btn.classList.toggle('active', state.favsOnly); btn.setAttribute('aria-pressed', String(state.favsOnly)); });
+      hiddenToggles.forEach(btn=>{ btn.classList.toggle('active', state.showHiddenOnly); btn.setAttribute('aria-pressed', String(state.showHiddenOnly)); btn.classList.toggle('danger', true); });
     }
 
     function getMaxTags(){ return window.innerWidth <= 640 ? 4 : 6; }
@@ -357,21 +338,19 @@
         const dd = daysUntil(it.Deadline);
         let dDay = '';
         if (Number.isFinite(dd)) {
-          if (dd > 0)        dDay = ` · D-${dd}`;
+          if (dd > 0) dDay = ` · D-${dd}`;
           else if (dd === 0) dDay = ` · D-Day`;
-          else               dDay = ` · D+${Math.abs(dd)}`;
+          else dDay = ` · D+${Math.abs(dd)}`;
         }
-
         let deadlineClass = '';
         if (dd === 0) deadlineClass = ' today';
         else if (dd >= 0 && dd <= 3) deadlineClass = ' soon';
-
         const deadlineLine = `<div class="deadline${deadlineClass}">${dStr}${dDay}</div>`;
 
         const roles = it.Roles || [];
         const shown = roles.slice(0, Math.max(0, maxTags));
         const rest = Math.max(0, roles.length - shown.length);
-        const roleTags = shown.map(r=>`<span class="tag">🏷️ ${escapeHTML(r)}</span>`).join('');
+        const roleTags = shown.map(r=>`<span class="tag clickable-tag" data-role="${escapeHTML(r)}">🏷️ ${escapeHTML(r)}</span>`).join('');
         const plusTag = rest > 0 ? `<span class="tag plus">+${rest}</span>` : '';
 
         const id = `${it.Company}::${it.Title}`;
@@ -388,37 +367,15 @@
             </div>
             <a class="btn" href="${it.Link}" target="_blank" rel="noopener"><span class="line">지원</span><span class="line">하기</span></a>
           </div>
-
           <div class="meta">${roleTags}${plusTag}</div>
           ${deadlineLine}
           ${it.Notes? `<div style="color:#aab7cf; font-size:13px; line-height:1.5; margin-top:4px;">${escapeHTML(it.Notes)}</div>`:''}
         `;
-
-        let touchStartX = 0;
-        let touchMoveX = 0;
-        let isSwiping = false;
+        
+        let touchStartX = 0, touchMoveX = 0, isSwiping = false;
         const SWIPE_THRESHOLD = 80;
-
-        card.addEventListener('touchstart', (e) => {
-          if (e.touches.length === 1) {
-            touchStartX = e.touches[0].clientX;
-            isSwiping = false;
-            card.style.transition = 'none';
-          }
-        }, {passive:true});
-
-        card.addEventListener('touchmove', (e) => {
-          if (e.touches.length === 1) {
-            touchMoveX = e.touches[0].clientX;
-            const diffX = touchMoveX - touchStartX;
-
-            if (Math.abs(diffX) > 10) {
-              isSwiping = true;
-              card.style.transform = `translateX(${diffX}px)`;
-            }
-          }
-        }, {passive:false});
-
+        card.addEventListener('touchstart', (e) => { if (e.touches.length === 1) { touchStartX = e.touches[0].clientX; isSwiping = false; card.style.transition = 'none'; } }, {passive:true});
+        card.addEventListener('touchmove', (e) => { if (e.touches.length === 1) { touchMoveX = e.touches[0].clientX; const diffX = touchMoveX - touchStartX; if (Math.abs(diffX) > 10) { isSwiping = true; card.style.transform = `translateX(${diffX}px)`; } } }, {passive:true});
         card.addEventListener('touchend', (e) => {
           card.style.transition = 'transform 0.2s ease-out, opacity 0.2s ease-out';
           if (isSwiping) {
@@ -427,51 +384,33 @@
               card.style.transform = `translateX(${diffX > 0 ? '100vw' : '-100vw'})`;
               card.style.opacity = '0';
               setTimeout(actOncePer(() => {
-                toggleHidden(id);
-                pipeline();
-              
-                // 현재 '숨김 보기' 모드인지 확인하여 메시지를 다르게 설정
-                const message = state.showHiddenOnly
-                  ? `'${it.Company}' 공고를 복원했습니다.`
-                  : `'${it.Company}' 공고를 숨겼습니다.`;
-              
+                toggleHidden(id); pipeline();
+                const message = state.showHiddenOnly ? `'${it.Company}' 공고를 복원했습니다.` : `'${it.Company}' 공고를 숨겼습니다.`;
                 showToast(message, id);
               }), 200);
-              e.preventDefault();
-            } else {
-              card.style.transform = 'translateX(0)';
-            }
+            } else { card.style.transform = 'translateX(0)'; }
           }
-          touchStartX = 0;
-          touchMoveX = 0;
-          isSwiping = false;
+          touchStartX = 0; touchMoveX = 0; isSwiping = false;
         });
-
         card.addEventListener('contextmenu', actOncePer((e)=>{
-          e.preventDefault();
-          toggleHidden(id);
-          pipeline();
-        
-          // 현재 '숨김 보기' 모드인지 확인하여 메시지를 다르게 설정
-          const message = state.showHiddenOnly
-            ? `'${it.Company}' 공고를 복원했습니다.`
-            : `'${it.Company}' 공고를 숨겼습니다.`;
-        
+          e.preventDefault(); toggleHidden(id); pipeline();
+          const message = state.showHiddenOnly ? `'${it.Company}' 공고를 복원했습니다.` : `'${it.Company}' 공고를 숨겼습니다.`;
           showToast(message, id);
         }), {passive:false});
-
         els.grid.appendChild(card);
       }
 
-      els.grid.querySelectorAll('.fav-btn').forEach(btn=>{
-        btn.addEventListener('click', actOncePer(()=>{
-          const id = btn.dataset.id;
-          toggleFav(id);
-          const active = btn.classList.toggle('active');
-          btn.textContent = active ? '★' : '☆';
-          btn.setAttribute('aria-pressed', active ? 'true' : 'false');
-          if (state.favsOnly) pipeline();
-        }));
+      els.grid.querySelectorAll('.fav-btn').forEach(btn=>{ btn.addEventListener('click', actOncePer(()=>{ const id = btn.dataset.id; toggleFav(id); const active = btn.classList.toggle('active'); btn.textContent = active ? '★' : '☆'; btn.setAttribute('aria-pressed', String(active)); if (state.favsOnly) pipeline(); })); });
+      
+      // 태그 클릭 이벤트 리스너 추가
+      els.grid.querySelectorAll('.clickable-tag').forEach(tag => {
+        tag.addEventListener('click', () => {
+          const role = tag.dataset.role;
+          if (role && !state.filters.role.includes(role)) {
+            state.filters.role.push(role);
+            pipeline();
+          }
+        });
       });
       
       requestAnimationFrame(()=>window.scrollTo(0, y));
@@ -481,27 +420,31 @@
       const openOnly = state.raw.filter(x => !x.isClosed);
       const companies = [...new Set(openOnly.map(x=>x.Company).filter(Boolean))].sort();
       const roles = [...new Set(openOnly.flatMap(x=>x.Roles||[]))].sort();
-
       const setOptions = (sel, values, placeholder) => {
         const cur = sel.value;
         sel.innerHTML = `<option value="">${placeholder}</option>` + values.map(v=>`<option>${escapeHTML(v)}</option>`).join('');
         if([...sel.options].some(o => o.value === cur)) sel.value = cur;
       };
-
-      setOptions(document.getElementById('filterCompany'), companies, '회사: 전체');
-      setOptions(document.getElementById('filterRole'), roles, '직무: 전체');
+      setOptions(els.filterCompany, companies, '회사: 전체');
+      setOptions(els.filterRole, roles, '직무: 전체');
     }
 
     function renderChips(){
       const chips = [];
       const { q, company, role } = state.filters;
       if(q){ chips.push(chip(`검색: ${q}`, ()=>{ state.filters.q=''; els.search.value=''; pipeline(); })); }
-      if(company){ chips.push(chip(`회사: ${company}`, ()=>{ state.filters.company=''; document.getElementById('filterCompany').value=''; pipeline(); })); }
-      if(role){ chips.push(chip(`직무: ${role}`, ()=>{ state.filters.role=''; document.getElementById('filterRole').value=''; pipeline(); })); }
+      if(company){ chips.push(chip(`회사: ${company}`, ()=>{ state.filters.company=''; els.filterCompany.value=''; pipeline(); })); }
+      
+      // 여러 직무 필터 칩 렌더링
+      role.forEach(r => {
+        chips.push(chip(`직무: ${r}`, () => {
+          state.filters.role = state.filters.role.filter(item => item !== r);
+          pipeline();
+        }));
+      });
 
-      const chipsWrap = document.getElementById('activeChips');
-      chipsWrap.innerHTML = '';
-      chips.forEach(c => chipsWrap.appendChild(c));
+      els.chips.innerHTML = '';
+      chips.forEach(c => els.chips.appendChild(c));
     }
 
     function chip(text, onClear){
@@ -512,55 +455,39 @@
       return el;
     }
 
-    function formatDate(d){ if(!(d instanceof Date)) return ''; const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,'0'); const day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; }
-    function daysUntil(d){ if(!(d instanceof Date)) return Infinity; const ms=new Date(d).setHours(0,0,0,0) - new Date().setHours(0,0,0,0); return Math.round(ms/86400000); }
+    function formatDate(d){ if(!d) return ''; const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,'0'); const day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; }
+    function daysUntil(d){ if(!d) return Infinity; const ms=new Date(d).setHours(23,59,59,999) - Date.now(); return Math.floor(ms/86400000); }
     function escapeHTML(s){ return String(s||'').replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c])); }
 
     function sampleData(){
       const toD = s => new Date(s);
-      return [
-        { Title:'샘플 채용', Company:'Sample Corp', Roles:['R&D','생산기술','품질','재경','경영지원','안전'], Deadline: toD('2025-10-10'), Link:'#', CreatedAt: toD('2025-09-01'), Notes:'이건 샘플입니다.', isClosed:false }
-      ];
+      return [ { Title:'샘플 채용', Company:'Sample Corp', Roles:['R&D','생산기술'], Deadline: toD('2025-10-10'), Link:'#', CreatedAt: toD('2025-09-01'), Notes:'이건 샘플입니다.', isClosed:false } ];
     }
 
-    document.getElementById('undoButton').addEventListener('click', () => {
-      if (lastHiddenId) {
-        toggleHidden(lastHiddenId);
-        pipeline();
-        toastElement.classList.remove('show');
-        clearTimeout(toastTimeout);
-        lastHiddenId = null;
-      }
-    });
-
+    document.getElementById('undoButton').addEventListener('click', () => { if (lastHiddenId) { toggleHidden(lastHiddenId); pipeline(); toastElement.classList.remove('show'); clearTimeout(toastTimeout); lastHiddenId = null; } });
     els.title.addEventListener('click', () => { location.reload(); });
     els.search.addEventListener('input', e=>{ state.filters.q = e.target.value; pipeline(); });
-    document.getElementById('filterCompany').addEventListener('change', e=>{ state.filters.company = e.target.value; pipeline(); });
-    document.getElementById('filterRole').addEventListener('change', e=>{ state.filters.role = e.target.value; pipeline(); });
+    els.filterCompany.addEventListener('change', e=>{ state.filters.company = e.target.value; pipeline(); });
     els.sort.addEventListener('change', e=>{ state.sort = e.target.value; pipeline(); });
 
-    favToggles.forEach(btn=>{
-      btn.addEventListener('click', ()=>{
-        state.favsOnly = !state.favsOnly;
+    // 직무 필터: 선택 시 배열에 추가하는 방식으로 변경
+    els.filterRole.addEventListener('change', e => {
+      const selectedRole = e.target.value;
+      if (selectedRole && !state.filters.role.includes(selectedRole)) {
+        state.filters.role.push(selectedRole);
         pipeline();
-      });
+      }
+      e.target.value = ''; // 선택 후 드롭다운은 초기화
     });
-    hiddenToggles.forEach(btn=>{
-      btn.addEventListener('click', ()=>{
-        state.showHiddenOnly = !state.showHiddenOnly;
-        pipeline();
-      });
-    });
+
+    favToggles.forEach(btn=>{ btn.addEventListener('click', ()=>{ state.favsOnly = !state.favsOnly; pipeline(); }); });
+    hiddenToggles.forEach(btn=>{ btn.addEventListener('click', ()=>{ state.showHiddenOnly = !state.showHiddenOnly; pipeline(); if (state.showHiddenOnly) { showToast("숨긴 공고만 표시합니다."); } else { showToast("기본 공고 목록을 표시합니다."); } }); });
 
     fetchCSV();
     setInterval(fetchCSV, 10 * 60 * 1000);
 
     let resizeTid;
-    window.addEventListener('orientationchange', () => {
-      clearTimeout(resizeTid);
-      resizeTid = setTimeout(() => { render(); }, 250);
-    });
+    window.addEventListener('orientationchange', () => { clearTimeout(resizeTid); resizeTid = setTimeout(() => { render(); }, 250); });
   </script>
 </body>
 </html>
-
