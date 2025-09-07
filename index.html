@@ -468,7 +468,7 @@
     function populateFilters(){
       const openOnly = state.raw.filter(x => !x.isClosed);
       const companies = [...new Set(openOnly.map(x=>x.Company).filter(Boolean))].sort();
-      const roles = [...new Set(open-only.flatMap(x=>x.Roles||[]))].sort();
+      const roles = [...new Set(openOnly.flatMap(x=>x.Roles||[]))].sort(); // 이 부분이 수정되었습니다.
 
       const setOptions = (sel, values, placeholder) => {
         const cur = sel.value;
@@ -551,3 +551,4 @@
   </script>
 </body>
 </html>
+
