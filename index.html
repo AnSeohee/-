@@ -186,12 +186,16 @@
     }
 
     function render(){
+      const y = window.scrollY;
       els.grid.innerHTML = '';
-      if(state.view.length === 0){ els.empty.style.display = 'block'; return; }
+
+      if(state.view.length === 0){ els.empty.style.display = 'block'; 
+        requestAnimationFrame(()=>window.scrollTo(0, y));
+        return;
+      }
       els.empty.style.display = 'none';
 
       const maxTags = getMaxTags();
-
       for(const it of state.view){
         const card = document.createElement('div');
         card.className = 'card';
@@ -229,6 +233,7 @@
         `;
         els.grid.appendChild(card);
       }
+      requestAnimationFrame(()=>window.scrollTo(0, y));
     }
 
     function populateFilters(){
@@ -288,8 +293,14 @@
     fetchCSV();
     setInterval(fetchCSV, 10 * 60 * 1000);
 
-    // 반응형에서 태그 제한 재렌더 (창 크기 바뀔 때)
-    window.addEventListener('resize', () => { render(); });
+    // 모바일 회전 시 태그 수 재계산
+    let resizeTid;
+    window.addEventListener('orientationchange', () => {
+      clearTimeout(resizeTid);
+      resizeTid = setTimeout(() => { render(); }, 250);
+    });
+
   </script>
 </body>
 </html>
+
