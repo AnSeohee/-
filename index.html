@@ -72,8 +72,6 @@
         <select id="sort">
           <option value="deadlineAsc">마감 임박순</option>
           <option value="deadlineDesc">마감 늦은순</option>
-          <option value="createdDesc">최신 추가순</option>
-          <option value="createdAsc">오래된 추가순</option>
           <option value="closed">마감된 공고</option>
           <option value="favs">즐겨찾기만</option> <!-- 🆕 -->
         </select>
@@ -175,21 +173,17 @@
       // 정렬
       const byDeadline = (a,b) => (a.Deadline? a.Deadline.getTime(): Infinity) - (b.Deadline? b.Deadline.getTime(): Infinity);
       const byDeadlineDesc = (a,b) => (b.Deadline? b.Deadline.getTime(): -Infinity) - (a.Deadline? a.Deadline.getTime(): -Infinity);
-      const byCreated = (a,b) => (a.CreatedAt? a.CreatedAt.getTime(): 0) - (b.CreatedAt? b.CreatedAt.getTime(): 0);
-      const byCreatedDesc = (a,b) => (b.CreatedAt? b.CreatedAt.getTime(): 0) - (a.CreatedAt? a.CreatedAt.getTime(): 0);
 
       switch(state.sort){
         case 'deadlineAsc': arr.sort(byDeadline); break;
         case 'deadlineDesc': arr.sort(byDeadlineDesc); break;
-        case 'createdAsc': arr.sort(byCreated); break;
-        case 'createdDesc': arr.sort(byCreatedDesc); break;
         case 'closed':
           arr.sort(byDeadlineDesc);
           break;
         case 'favs': {
           const favIds = getFavs();
           arr = arr.filter(it => favIds.includes(`${it.Company}::${it.Title}`));
-          arr.sort(byDeadlineDesc); // ← 즐겨찾기 뷰에서도 마감 최신순
+          arr.sort(byDeadline); // ← 즐겨찾기 뷰에서도 임박순
           break;
         }
         default:
@@ -358,6 +352,7 @@
   </script>
 </body>
 </html>
+
 
 
 
