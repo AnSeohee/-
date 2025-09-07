@@ -51,7 +51,7 @@
     @media (max-width:640px){ .grid { grid-template-columns:1fr; } }
 
     .card { border:1px solid var(--line); background:linear-gradient(180deg, #0e1522, #0a0f18); border-radius:16px; padding:16px; display:flex; flex-direction:column; gap:10px; box-shadow:0 6px 16px rgba(0,0,0,0.25); }
-    .row { display:flex; align-items:flex-start; gap:12px; }
+    .row { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
     .card-header { flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; }
     .card-header .company { font-size:14px; font-weight:600; color:var(--accent); }
     .card-header .title { font-size:16px; font-weight:700; line-height:1.35; }
@@ -69,19 +69,10 @@
     .empty { text-align:center; color:#9aa7bd; padding:40px 0; border:1px dashed var(--line); border-radius:12px; }
     footer { color:#7c8aa3; font-size:12px; text-align:center; padding:24px 0 40px; }
     .notice-danger { color:#fca5a5; font-size:12px; margin-top:10px; }
-
-    .card-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
-    .card-actions button {
-      display: flex; align-items: center; justify-content: center;
-      width: 38px; height: 38px; padding: 0;
-      border: 1px solid var(--line); border-radius: 10px;
-      background: var(--card); color: #9aa7bd;
-      font-size: 16px; cursor: pointer; line-height: 1;
-      transition: all 0.2s;
-    }
-    .card-actions button:hover { background-color: rgba(255,255,255,0.07); }
-    .card-actions .fav-btn.active { color: #fbbf24; border-color: rgba(251, 191, 36, 0.5); }
-    .card-actions .card-hide-btn:hover { color: #ef4444; border-color: rgba(239, 68, 68, 0.5); }
+    
+    /* 카드 내 즐겨찾기 버튼 */
+    .fav-btn { cursor:pointer; font-size:18px; color:#9aa7bd; user-select:none; }
+    .fav-btn.active { color:#fbbf24; }
   </style>
   <script src="https://unpkg.com/papaparse@5.4.1/papaparse.min.js"></script>
 </head>
@@ -123,7 +114,7 @@
 
   <footer>
     <div class="wrap">
-      Notice Board · Made by 자동 새로고침 10분 간격
+      Notice Board · Made by 힘들어요
       <div style="margin-top:8px; font-size:11px; color:#9aa7bd;">
         본 사이트의 공고 정보는 참고용으로만 제공되며,<br>
         정확한 내용과 일정은 반드시 각 회사의 공식 채용 공고를 확인하시기 바랍니다.<br>
@@ -328,15 +319,15 @@
         card.innerHTML = `
           <div class="row">
             <div class="card-header">
-              <div class="company">${escapeHTML(it.Company || '회사 미정')}</div>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <span class="fav-btn ${isFav?'active':''}" data-id="${escapeHTML(id)}" role="button" aria-pressed="${isFav?'true':'false'}">${isFav?'★':'☆'}</span>
+                <div class="company">${escapeHTML(it.Company || '회사 미정')}</div>
+              </div>
               <div class="title">${escapeHTML(it.Title)}</div>
-            </div>
-            <div class="card-actions">
-              <button class="fav-btn ${isFav ? 'active' : ''}" data-id="${escapeHTML(id)}" title="즐겨찾기">${isFav ? '★' : '☆'}</button>
-              <button class="card-hide-btn" data-id="${escapeHTML(id)}" title="숨기기">✕</button>
             </div>
             <a class="btn" href="${it.Link}" target="_blank" rel="noopener"><span class="line">지원</span><span class="line">하기</span></a>
           </div>
+
           <div class="meta">${roleTags}${plusTag}</div>
           ${deadlineLine}
           ${it.Notes? `<div style="color:#aab7cf; font-size:13px; line-height:1.5; margin-top:4px;">${escapeHTML(it.Notes)}</div>`:''}
@@ -366,18 +357,11 @@
           toggleFav(id);
           const active = btn.classList.toggle('active');
           btn.textContent = active ? '★' : '☆';
+          btn.setAttribute('aria-pressed', active ? 'true' : 'false');
           if (state.favsOnly) pipeline();
         }));
       });
       
-      els.grid.querySelectorAll('.card-hide-btn').forEach(btn => {
-        btn.addEventListener('click', actOncePer(() => {
-          const id = btn.dataset.id;
-          toggleHidden(id);
-          pipeline();
-        }));
-      });
-
       requestAnimationFrame(()=>window.scrollTo(0, y));
     }
 
