@@ -196,6 +196,11 @@
     let toastTimeout = null;
     const toastElement = document.getElementById('toast');
 
+    // 길게누르기 동작 감도 설정
+    const LONGPRESS_MS = 800;   // 500ms → 800ms 로 늘려 의도성 확보
+    const MOVE_CANCEL  = 12;    // 터치가 12px 이상 움직이면 '스크롤'로 간주해 취소
+    const SCROLL_BIAS  = 4;     // 세로가 가로보다 4px 더 크면 스크롤 의도라고 판단
+
     function showToast(message, itemId = null) {
       const toastMessage = document.getElementById('toastMessage');
       const undoButton = document.getElementById('undoButton');
@@ -405,17 +410,46 @@
           showToast(message, id);
         }), {passive:false});
         
-        let pressTimer = null;
-        card.addEventListener('touchstart', () => {
+        let pressTimer = null, moved = false, sx = 0, sy = 0;
+        
+        card.addEventListener('touchstart', (e) => {
+          if (e.touches.length !== 1) return; // 멀티터치 무시
+        
+          // 버튼/링크 위에서 시작한 길게누르기는 숨김 처리 제외 (오클릭 방지)
+          if (e.target.closest('.btn, .fav-btn, .clickable-tag, button, a')) return;
+        
+          const t = e.touches[0];
+          sx = t.clientX; sy = t.clientY; moved = false;
+        
           pressTimer = setTimeout(actOncePer(() => {
-            toggleHidden(id);
-            pipeline();
-            const message = state.showHiddenOnly ? `'${it.Company}' 공고를 복원했습니다.` : `'${it.Company}' 공고를 숨겼습니다.`;
-            showToast(message, id);
-          }), 500);
+            if (!moved) {
+              toggleHidden(id);
+              pipeline();
+              const message = state.showHiddenOnly
+                ? `'${it.Company}' 공고를 복원했습니다.`
+                : `'${it.Company}' 공고를 숨겼습니다.`;
+              showToast(message, id);
+            }
+          }), LONGPRESS_MS);
         }, { passive: true });
+        
+        card.addEventListener('touchmove', (e) => {
+          if (!pressTimer) return;
+          const t = e.touches[0];
+          const dx = Math.abs(t.clientX - sx);
+          const dy = Math.abs(t.clientY - sy);
+        
+          // 살짝 흔들림은 허용, 일정 이상 움직이거나 세로가 확실히 크면 '스크롤'로 간주 → 취소
+          if (dx > MOVE_CANCEL || dy > MOVE_CANCEL || (dy > dx + SCROLL_BIAS)) {
+            moved = true;
+            clearTimeout(pressTimer);
+            pressTimer = null;
+          }
+        }, { passive: true });
+        
         card.addEventListener('touchend', () => {
           clearTimeout(pressTimer);
+          pressTimer = null;
         }, { passive: true });
 
         els.grid.appendChild(card);
@@ -663,3 +697,4 @@
   </script>
 </body>
 </html>
+
