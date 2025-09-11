@@ -358,7 +358,7 @@
         return (a.Title || '').localeCompare(b.Title || '', 'ko', { numeric: true, sensitivity: 'base' });
       });
       
-      list.innerHTML = items.length ? items.map(it=>`
+      list.innerHTML = sorted.length ? sorted.map(it=>`
         <a href="${it.Link}" target="_blank" rel="noopener"
            style="display:block; padding:10px; border:1px solid var(--line);
                   border-radius:10px; background:#0b1220; color:var(--text); text-decoration:none;">
@@ -850,6 +850,7 @@
   </script>
 </body>
 </html>
+
 
 
 
