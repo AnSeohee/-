@@ -188,6 +188,16 @@
       loader: document.getElementById('loader'),
       ioArea: document.getElementById('io-area'),
     };
+    
+    // 제목 오른쪽에 "오늘 추가된 공고" 배지 삽입 (한 번만 생성)
+    const addedBadge = document.createElement('span');
+    addedBadge.id = 'added-today';
+    addedBadge.style.marginLeft = '8px';
+    addedBadge.style.fontSize = '12px';
+    addedBadge.style.color = 'var(--muted)';
+    addedBadge.style.verticalAlign = 'middle';
+    addedBadge.style.display = 'none';
+    els.title.insertAdjacentElement('afterend', addedBadge);
 
     const favToggles = document.querySelectorAll('.toggle-favs');
     const hiddenToggles = document.querySelectorAll('.toggle-hidden');
@@ -238,6 +248,7 @@
         console.error(e);
         state.raw = sampleData();
         pipeline();
+        renderAddedToday();
       } finally {
         els.loader.style.display = 'none';
       }
@@ -720,6 +731,7 @@
   </script>
 </body>
 </html>
+
 
 
 
