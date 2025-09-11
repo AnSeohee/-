@@ -826,7 +826,12 @@
     document.getElementById('added-modal').addEventListener('click', (e)=>{
       if(e.target.id==='added-modal') closeAddedTodayModal();
     });
-
+    // ESC 키로 모달 닫기
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeAddedTodayModal();
+      }
+    });
     
     // 초기 로드 및 주기적 갱신
     fetchCSV();
@@ -837,4 +842,5 @@
   </script>
 </body>
 </html>
+
 
