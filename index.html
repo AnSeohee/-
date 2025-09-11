@@ -350,7 +350,14 @@
       const modal = document.getElementById('added-modal');
       const list  = document.getElementById('added-list');
       const items = itemsAddedToday();
-    
+
+      // 회사명 → 공고명 2차 정렬 (한글/대소문자/숫자 자연정렬 대응)
+      const sorted = [...items].sort((a, b) => {
+        const byCompany = (a.Company || '').localeCompare(b.Company || '', 'ko', { numeric: true, sensitivity: 'base' });
+        if (byCompany !== 0) return byCompany;
+        return (a.Title || '').localeCompare(b.Title || '', 'ko', { numeric: true, sensitivity: 'base' });
+      });
+      
       list.innerHTML = items.length ? items.map(it=>`
         <a href="${it.Link}" target="_blank" rel="noopener"
            style="display:block; padding:10px; border:1px solid var(--line);
@@ -843,6 +850,7 @@
   </script>
 </body>
 </html>
+
 
 
 
