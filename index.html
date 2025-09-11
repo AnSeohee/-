@@ -233,6 +233,7 @@
         const parsed = Papa.parse(csv, { header:true, skipEmptyLines:true });
         state.raw = (parsed.data || []).map(normalizeRow).filter(x=>x.Title && x.Link);
         pipeline();
+        renderAddedToday();
       }catch(e){
         console.error(e);
         state.raw = sampleData();
@@ -253,12 +254,14 @@
       };
       const cat = trim(r.Category || r.category || r.분류 || r.직무 || "");
       const deadline = parseDate(r.Deadline || r.deadline || r.마감일);
+      const addDate  = parseDate(r.AddDate || r.addDate || r.추가일);
       return {
         Title: trim(r.Title || r.title || r.제목),
         Company: trim(r.Company || r.company || r.회사),
         Roles: splitRoles(cat),
         CategoryRaw: cat,
         Deadline: deadline,
+        AddDate: addDate,
         Link: trim(r.Link || r.link || r.URL || r.링크),
         CreatedAt: parseDate(r.CreatedAt || r.createdAt || r.created || r.작성일),
         Notes: trim(r.Notes || r.notes || r.비고 || r.메모),
@@ -272,7 +275,27 @@
       const dd = new Date(d);  dd.setHours(0,0,0,0);
       return dd < today;
     }
+    
+    function countAddedToday(){
+      const today = new Date(); today.setHours(0,0,0,0);
+      return (state.raw || []).filter(x => {
+        if(!(x.AddDate instanceof Date)) return false;
+        const d = new Date(x.AddDate); d.setHours(0,0,0,0);
+        return d.getTime() === today.getTime();
+      }).length;
+    }
 
+    function renderAddedToday(){
+      const n = countAddedToday();
+      if(n > 0){
+        addedBadge.textContent = `오늘 추가된 공고: ${n}개`;
+        addedBadge.style.display = 'inline-block';
+      } else {
+        addedBadge.textContent = '';
+        addedBadge.style.display = 'none';
+      }
+    }
+        
     function getHidden(){ return JSON.parse(localStorage.getItem('hidden')||'[]'); }
     function setHidden(list){ localStorage.setItem('hidden', JSON.stringify(list)); }
     function toggleHidden(id){
@@ -697,5 +720,6 @@
   </script>
 </body>
 </html>
+
 
 
