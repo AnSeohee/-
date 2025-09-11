@@ -631,12 +631,14 @@
       const companies = [...new Set(relevantPosts.map(x=>x.Company).filter(Boolean))].sort();
       const roles = [...new Set(relevantPosts.flatMap(x=>x.Roles||[]))].sort();
     
-      const setOptions = (sel, values, placeholder) => {
-        sel.innerHTML = `<option value="">${placeholder}</option>` + values.map(v=>`<option>${escapeHTML(v)}</option>`).join('');
-      };
+      // 회사 옵션: 전체 (N)
+      const totalCount = state.view.length;
+      els.filterCompany.innerHTML = `<option value="">회사: 전체 (${totalCount})</option>` 
+        + companies.map(v=>`<option>${escapeHTML(v)}</option>`).join('');
     
-      setOptions(els.filterCompany, companies, '회사: 전체');
-      setOptions(els.filterRole, roles, '직무: 전체');
+      // 직무 옵션: 개수 표시 없이
+      els.filterRole.innerHTML = `<option value="">직무: 전체</option>` 
+        + roles.map(v=>`<option>${escapeHTML(v)}</option>`).join('');
     }
 
     function renderChips(){
@@ -850,6 +852,7 @@
   </script>
 </body>
 </html>
+
 
 
 
