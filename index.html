@@ -18,10 +18,18 @@
     
     #added-today {
       font-size: 12px;
-      color: var(--accent);     /* 강조 색상 */
-      vertical-align: middle;
+      color: var(--accent);               /* 글자 색상 */
+      cursor: pointer;                    /* 버튼 느낌 */
       display: none;
-      cursor: pointer;          /* 버튼처럼 포인터 표시 */
+    
+      padding: 2px 8px;                   /* 안쪽 여백 */
+      border: 1px solid var(--accent);    /* 테두리 */
+      border-radius: 999px;               /* pill 형태 */
+      background-color: rgba(96,165,250,0.1); /* accent색 살짝 배경 */
+      font-weight: 600;
+    }
+    #added-today:hover {
+      background-color: rgba(96,165,250,0.2);
     }
 
     .header-row { display:flex; align-items:center; justify-content:space-between; gap:12px; }
@@ -795,6 +803,7 @@
   </script>
 </body>
 </html>
+
 
 
 
