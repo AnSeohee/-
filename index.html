@@ -355,8 +355,8 @@
         <a href="${it.Link}" target="_blank" rel="noopener"
            style="display:block; padding:10px; border:1px solid var(--line);
                   border-radius:10px; background:#0b1220; color:var(--text); text-decoration:none;">
-          <div style="font-weight:700">${escapeHTML(it.Title)}</div>
-          <div style="color:#9aa7bd; font-size:12px; margin-top:2px">${escapeHTML(it.Company||'회사 미정')}</div>
+          <div style="font-weight:700">${escapeHTML(it.Company || '회사 미정')}</div>
+          <div style="color:#9aa7bd; font-size:12px; margin-top:2px">${escapeHTML(it.Title)}</div>
         </a>
       `).join('') : `<div style="color:#9aa7bd; font-size:14px;">오늘 추가된 공고가 없어요.</div>`;
     
@@ -829,7 +829,8 @@
     // ESC 키로 모달 닫기
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
-        closeAddedTodayModal();
+        const modal = document.getElementById('added-modal');
+        if (modal && modal.style.display === 'flex') closeAddedTodayModal();
       }
     });
     
@@ -842,5 +843,6 @@
   </script>
 </body>
 </html>
+
 
 
